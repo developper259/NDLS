@@ -5,17 +5,18 @@
 class File
 {
 private:
-    std::string path;
+    const char* path;
 public:
-    File(std::string path);
+    File(const char* path);
 
     void createFile(const char* path);
     void createFolder(const char* path);
     void deleteFile(const char* path);
     void deleteFolder(const char* path);
+    bool isExistFile(const char* path);
 };
 
-File::File(std::string path)
+File::File(const char* path)
 {
     this->path = path;
 }
@@ -36,4 +37,17 @@ void File::deleteFile(const char* path)
 void File::deleteFolder(const char* path)
 {
     rmdir(path);
+}
+bool File::isExistFile(const char* path)
+{
+    std::ifstream file;
+    file.open(path);
+
+    if(file)
+    {
+        return true;
+    }else
+    {
+        return false;
+    }
 }
