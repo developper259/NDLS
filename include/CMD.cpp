@@ -1,19 +1,22 @@
 #include <iostream>
 #include <bits/stdc++.h>
 
+#include <typeinfo>
+
 #include "File.cpp"
 #include "addFunction.cpp"
+
+#include "commands/Exit.cpp"
+#include "commands/Help.cpp"
 
 class CMD
 {
 private:
     const char* path;
     File* file;
+    std::vector<Template> commands;
 
-    void loadFunction()
-    {
-
-    }
+    void loadFunction();
 public:
     bool isRunning = true;
 
@@ -31,6 +34,15 @@ CMD::CMD(const char* path)
     {
         this->file->createFolder(path);
     }
+
+    this->loadFunction();
+}
+
+void CMD::loadFunction()
+{
+    this->commands.push_back(Exit());
+
+    this->commands.push_back(Help(this->commands));
 }
 
 void CMD::parseExec(std::string cmdStr)
@@ -57,5 +69,23 @@ void CMD::parseExec(std::string cmdStr)
 
 void CMD::execute(std::string f, std::string a[])
 {
+    /*for(Template command : this->commands)
+    {
+        auto find = std::find(command.alias.begin(),command.alias.end(), f);
+        if(f == command.name || find != command.alias.end())
+        {
+            command.run(a);
+            return;
+        }
+    }*/
 
+    if(f == "exit")
+    {
+        Exit* e = new Exit();
+        e->run(a);
+    }else if(f == "help" || f == "h")
+    {
+        Help* h = new Help(this->commands);
+        h->run(a);
+    }
 }
