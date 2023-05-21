@@ -2,7 +2,7 @@
 #include <bits/stdc++.h>
 
 #include "File.cpp"
-#include "String.cpp"
+#include "addFunction.cpp"
 
 class CMD
 {
@@ -18,7 +18,8 @@ public:
     bool isRunning = true;
 
     CMD(const char* path);
-    char* parseExec(const char* cmdStr);
+    void parseExec(std::string cmdStr);
+    void execute(std::string f, std::string a[]);
 };
 
 CMD::CMD(const char* path)
@@ -32,15 +33,29 @@ CMD::CMD(const char* path)
     }
 }
 
-void CMD::parseExec(const char* cmdStr)
+void CMD::parseExec(std::string cmdStr)
 {
-    int countSplit = splitSize(cmdStr, ' ');
-    char* argvs[countSplit];
+    int countSplit = splitSizeString(cmdStr, ' ');
+    std::string a[countSplit];
+
     for (int i = 0; i < countSplit; i++)
     {
-        argvs[i] = split(cmdStr, 0, ' ', i);
+        a[i] = splitString(cmdStr, ' ', i);
     }
-    char* func = argvs[0];
-    delete argvs[0];
-    std::cout << func << std::endl;
+    std::string f = a[0];
+
+    removeElementFromTable(a, 0, countSplit);
+
+    if((countSplit - 1) == 0)
+    {
+        this->execute(f, NULL);
+    }else
+    {
+        this->execute(f, a);
+    }
+}
+
+void CMD::execute(std::string f, std::string a[])
+{
+
 }

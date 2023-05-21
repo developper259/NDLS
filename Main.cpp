@@ -8,11 +8,11 @@ int main(int argc, char const *argv[])
 
     while(cmd->isRunning)
     {
-        char* cmd;
+        std::string cmdU;
 
-        cin >> cmdU;
+        std::cout << "$ "; std::getline(std::cin, cmdU);
 
-        if(cmdU != NULL)
+        if(cmdU != "")
         {
             cmd->parseExec(cmdU);
         }
