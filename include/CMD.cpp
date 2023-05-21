@@ -15,8 +15,10 @@ private:
 
     }
 public:
+    bool isRunning = true;
+
     CMD(const char* path);
-    char* parse(const char* cmdStr);
+    char* parseExec(const char* cmdStr);
 };
 
 CMD::CMD(const char* path)
@@ -24,16 +26,21 @@ CMD::CMD(const char* path)
     this->path = path;
     this->file = new File(path);
 
-    if(not this->file->isExistFile(path))
+    if(not this->file->isExist(path))
     {
         this->file->createFolder(path);
     }
 }
 
-char* parse(const char* cmdStr)
+void CMD::parseExec(const char* cmdStr)
 {
-    if(cmdStr != NULL)
+    int countSplit = splitSize(cmdStr, ' ');
+    char* argvs[countSplit];
+    for (int i = 0; i < countSplit; i++)
     {
-        char* func = split(cmdStr, ' ', 0);
+        argvs[i] = split(cmdStr, 0, ' ', i);
     }
+    char* func = argvs[0];
+    delete argvs[0];
+    std::cout << func << std::endl;
 }

@@ -13,7 +13,7 @@ public:
     void createFolder(const char* path);
     void deleteFile(const char* path);
     void deleteFolder(const char* path);
-    bool isExistFile(const char* path);
+    bool isExist(const char* path);
 };
 
 File::File(const char* path)
@@ -38,7 +38,7 @@ void File::deleteFolder(const char* path)
 {
     rmdir(path);
 }
-bool File::isExistFile(const char* path)
+bool File::isExist(const char* path)
 {
     std::ifstream file;
     file.open(path);
