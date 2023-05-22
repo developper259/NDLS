@@ -30,5 +30,3 @@ public:
 		}
 	}
 };
-
-Help* h = new Help();

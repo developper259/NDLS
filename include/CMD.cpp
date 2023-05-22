@@ -1,3 +1,6 @@
+#ifndef CMD_H
+#define CMD_H
+
 #include <iostream>
 #include <bits/stdc++.h>
 
@@ -10,32 +13,40 @@
 
 #include "commands/Exit.cpp"
 #include "commands/Help.cpp"
+#include "commands/Init.cpp"
+#include "commands/Clear.cpp"
 
 class CMD
 {
-private:
-    const char* path;
-    File* file;
 
 public:
+    const char* path;
     bool isRunning = true;
 
 
     CMD(const char* path);
     void parseExec(std::string cmdStr);
     void execute(std::string f, std::string a[]);
+    void loadFunction();
 };
 
 CMD::CMD(const char* path)
 {
     this->path = path;
-    this->file = new File(path);
 
-    if(not this->file->isExist(path))
+    if(not isExist(path))
     {
-        this->file->createFolder(path);
+        createFolder(path);
     }
+    this->loadFunction();
+}
 
+void CMD::loadFunction()
+{
+    new Exit();
+    new Help();
+    new Init(this->path);
+    new Clear(this->path);
 }
 
 
@@ -73,3 +84,5 @@ void CMD::execute(std::string f, std::string a[])
         }
     }
 }
+
+#endif

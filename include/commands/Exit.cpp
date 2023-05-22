@@ -22,5 +22,3 @@ public:
 		exit(0);
 	}
 };
-
-Exit* e = new Exit();
