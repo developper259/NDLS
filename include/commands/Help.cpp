@@ -1,13 +1,12 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "Template.cpp"
 
 class Help : public Template
 {
-private:
-	std::vector<Template> commands;
 public:
-	Help(std::vector<Template> commands)
+	Help()
 	{
 		this->name = "help";
 		this->description = "show this content";
@@ -15,19 +14,21 @@ public:
 		this->alias = {"h"};
 		this->isConnecUserToExec = false;
 
-		this->commands = commands;
+		commands.push_back(this);
 	}
 
-	void run(std::string argvs[])
+	void run(std::string argvs[]) override
 	{
-		for(Template command : this->commands)
+		for(Template* command : commands)
 		{
-			std::cout << "  " << command.name << " : " << command.description << std::endl ;
+			std::cout << "  " << command->name << " : " << command->description << std::endl ;
 
-			for(std::string methode : command.useHelp)
+			for(std::string methode : command->useHelp)
 			{
 				std::cout << "    " << methode << std::endl;
 			}
 		}
 	}
 };
+
+Help* h = new Help();

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <iostream>
 
 #include "Template.cpp"
 
@@ -12,10 +13,14 @@ public:
 		this->useHelp = {"exit"};
 		this->alias = {};
 		this->isConnecUserToExec = false;
+
+		commands.push_back(this);
 	}
 
-	void run(std::string argvs[])
+	void run(std::string argvs[]) override
 	{
 		exit(0);
 	}
 };
+
+Exit* e = new Exit();
