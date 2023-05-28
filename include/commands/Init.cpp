@@ -2,8 +2,8 @@
 
 #include "Template.cpp"
 
-#include "../File.cpp"
 #include "../CMD.cpp"
+#include "../Config.cpp"
 
 class Init : public Template
 {
@@ -23,15 +23,13 @@ public:
 		commands.push_back(this);
 	}
 
-	void run(std::string argvs[])
+	void run(std::vector<char*> argvs) override
 	{
 		if(not isExist(this->path))
 		{
 			createFolder(this->path);
 		}
-		std::string p(this->path);
-		// create config file
-		std::string filename = p + "config.json";
-		createFile(filename.c_str());
+		initConfigFile(this->path);
+
 	}
 };

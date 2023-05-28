@@ -14,7 +14,7 @@ public:
 	std::vector<std::string> alias;
 	bool isConnecUserToExec;
 
-	virtual void run(std::string argvs[]) = 0;
+	virtual void run(std::vector<char*> argvs) = 0;
 };
 std::vector<Template*> commands;
 

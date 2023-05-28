@@ -4,6 +4,8 @@
 #include <iostream>
 #include <fstream>
 #include <direct.h>
+#include "YamlMin/Node.hpp"
+#include "YamlMin/Type.hpp"
 
 
 void createFile(const char* path)
@@ -35,6 +37,19 @@ bool isExist(const char* path)
     {
         return false;
     }
+}
+void writeYamlContent(const char* path, YamlNode data)
+{
+    data.write(path);
+}
+
+YamlNode getYamlContent(const char* path)
+{
+    YamlNode node;
+
+    node.read(path);
+
+    return node;
 }
 
 #endif

@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <iostream>
-#include <filesystem>
-
 #include "Template.cpp"
 
 #include "../File.cpp"
@@ -25,8 +23,8 @@ public:
 		commands.push_back(this);
 	}
 
-	void run(std::string argvs[])
+	void run(std::vector<char*> argvs) override
 	{
-		
+		//deleteFolder(this->path);
 	}
 };

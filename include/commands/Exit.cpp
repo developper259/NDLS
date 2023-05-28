@@ -17,7 +17,7 @@ public:
 		commands.push_back(this);
 	}
 
-	void run(std::string argvs[]) override
+	void run(std::vector<char*> argvs) override
 	{
 		exit(0);
 	}
