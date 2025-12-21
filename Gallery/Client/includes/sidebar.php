@@ -28,75 +28,47 @@
         >
     </div>
     
-    <!-- Filters -->
+    <!-- Navigation -->
     <div class="sidebar-content">
-        <div class="filters-header" id="toggle-filters">
-            <h3>
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-                </svg>
-                Filtres
-            </h3>
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
+        <!-- Bouton Photos -->
+        <button class="nav-btn active" id="nav-photos">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
             </svg>
-        </div>
+            <span>Photos</span>
+        </button>
         
-        <div class="filters-content" id="filters-content">
-            <!-- Type Filter -->
-            <div class="filter-group">
-                <label class="filter-label">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
-                    Type
-                </label>
-                <select class="filter-select" id="filter-type">
-                    <option value="all">Tous les médias</option>
-                    <option value="photo">Photos uniquement</option>
-                    <option value="video">Vidéos uniquement</option>
-                </select>
-            </div>
-            
-            <!-- Size Filter -->
-            <div class="filter-group">
-                <label class="filter-label">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-                    </svg>
-                    Taille
-                </label>
-                <select class="filter-select" id="filter-size">
-                    <option value="all">Toutes tailles</option>
-                    <option value="small">Petit (&lt; 2 MB)</option>
-                    <option value="medium">Moyen (2-10 MB)</option>
-                    <option value="large">Grand (&gt; 10 MB)</option>
-                </select>
-            </div>
-            
-            <!-- Sort Filter -->
-            <div class="filter-group">
-                <label class="filter-label">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <polyline points="19 12 12 19 5 12"></polyline>
-                    </svg>
-                    Trier par
-                </label>
-                <select class="filter-select" id="filter-sort">
-                    <option value="date_desc">Plus récent</option>
-                    <option value="date_asc">Plus ancien</option>
-                    <option value="size_desc">Plus grand</option>
-                    <option value="size_asc">Plus petit</option>
-                    <option value="name_asc">Nom (A-Z)</option>
-                    <option value="name_desc">Nom (Z-A)</option>
-                </select>
-            </div>
-        </div>
+        <!-- Bouton Albums -->
+        <button class="nav-btn" id="nav-albums">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            </svg>
+            <span>Albums</span>
+        </button>
+        
+        <!-- Bouton Favoris -->
+        <button class="nav-btn" id="nav-favorites">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <span>Favoris</span>
+        </button>
+        
+        <!-- Bouton Corbeille -->
+        <button class="nav-btn" id="nav-trash">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            <span>Corbeille</span>
+        </button>
     </div>
     
     <!-- Storage -->

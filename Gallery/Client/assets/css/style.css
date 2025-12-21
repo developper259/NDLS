@@ -222,6 +222,47 @@ img {
 /* ================================
    SIDEBAR
    ================================ */
+
+/* Boutons de navigation */
+.nav-btn {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 12px 24px;
+    color: var(--foreground);
+    font-size: 15px;
+    font-weight: 500;
+    transition: all var(--transition);
+    border-left: 3px solid transparent;
+    background: none;
+    text-align: left;
+}
+
+.nav-btn:hover {
+    background-color: var(--muted);
+    color: var(--primary);
+}
+
+.nav-btn.active {
+    background-color: var(--muted);
+    border-left-color: var(--primary);
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.nav-btn .icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.nav-btn span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .sidebar {
     position: fixed;
     top: var(--header-height);
@@ -292,7 +333,7 @@ img {
 .sidebar-content {
     flex: 1;
     overflow-y: auto;
-    padding: 0 20px;
+    padding: 0 0 20px 0;
 }
 
 .filters-header {

@@ -30,7 +30,7 @@ class ApiService {
             }
         }
 
-        CONFIG.log('API Request:', url, config);
+        console.log('API Request:', url, config);
 
         try {
             const response = await fetch(url, config);
@@ -38,13 +38,13 @@ class ApiService {
             if (!response.ok) {
                 throw new Error(`HTTP Error: ${response.status}`);
             }
-
+            console.log(response);
             const data = await response.json();
-            CONFIG.log('API Response:', data);
+            console.log('API Response:', data);
             return data;
 
         } catch (error) {
-            CONFIG.log('API Error:', error);
+            console.log('API Error:', error);
             throw error;
         }
     }
@@ -82,7 +82,7 @@ class ApiService {
     async uploadFile(file, onProgress) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
-            formData.append('media', file);
+            formData.append('files', file);
 
             const xhr = new XMLHttpRequest();
             
@@ -115,11 +115,36 @@ class ApiService {
         });
     }
 
-    // Supprimer un média
+    // Supprimer un média (déplacer vers la corbeille)
     async deleteMedia(id) {
-        return this.request(CONFIG.ENDPOINTS.DELETE, {
-            method: 'DELETE',
-            params: { id }
+        return this.request(`${CONFIG.ENDPOINTS.MEDIA}/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // Récupérer les médias dans la corbeille
+    async getTrash() {
+        return this.request(CONFIG.ENDPOINTS.TRASH);
+    }
+
+    // Restaurer un média depuis la corbeille
+    async restoreFromTrash(id) {
+        return this.request(`${CONFIG.ENDPOINTS.TRASH}/restore/${id}`, {
+            method: 'POST'
+        });
+    }
+
+    // Supprimer définitivement un média
+    async deletePermanently(id) {
+        return this.request(`${CONFIG.ENDPOINTS.TRASH}/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // Vider la corbeille
+    async emptyTrash() {
+        return this.request(CONFIG.ENDPOINTS.TRASH, {
+            method: 'DELETE'
         });
     }
 
