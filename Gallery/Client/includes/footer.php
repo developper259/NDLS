@@ -26,10 +26,16 @@
         <div class="toast-container" id="toast-container"></div>
         
     </div><!-- /.app-container -->
-    
+
     <!-- Scripts -->
     <script src="assets/js/config.js"></script>
     <script src="assets/js/api.js"></script>
     <script src="assets/js/app.js"></script>
+    <script src="assets/js/context-menu.js"></script>
+    <script>
+      // Initialiser le menu contextuel global
+      window.contextMenu = new ContextMenu();
+      console.log('Menu contextuel initialisé');
+    </script>
 </body>
 </html>

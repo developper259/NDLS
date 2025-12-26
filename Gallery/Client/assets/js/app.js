@@ -10,12 +10,6 @@ class GalleryApp {
     this.selectedItems = new Set();
     this.currentLightboxIndex = -1;
     this.currentView = "photos"; // 'photos', 'albums', 'favorites', 'trash'
-    this.filters = {
-      type: "all",
-      sizeRange: "all",
-      sortBy: "date_desc",
-      search: "",
-    };
     this.isLoading = true;
 
     this.init();
@@ -37,27 +31,10 @@ class GalleryApp {
       searchInput.addEventListener("input", (e) => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          this.filters.search = e.target.value;
           this.applyFilters();
         }, CONFIG.UI.DEBOUNCE_SEARCH);
       });
     }
-
-    // Filtres
-    document.getElementById("filter-type")?.addEventListener("change", (e) => {
-      this.filters.type = e.target.value;
-      this.applyFilters();
-    });
-
-    document.getElementById("filter-size")?.addEventListener("change", (e) => {
-      this.filters.sizeRange = e.target.value;
-      this.applyFilters();
-    });
-
-    document.getElementById("filter-sort")?.addEventListener("change", (e) => {
-      this.filters.sortBy = e.target.value;
-      this.applyFilters();
-    });
 
     // Upload
     const uploadBtn = document.getElementById("upload-btn");
@@ -130,32 +107,11 @@ class GalleryApp {
           break;
       }
     });
-
-    // Toggle filtres
-    document.getElementById("toggle-filters")?.addEventListener("click", () => {
-      document.getElementById("filters-content")?.classList.toggle("collapsed");
-      document.getElementById("toggle-filters")?.classList.toggle("collapsed");
-    });
   }
 
   // Charger les données
   async loadMedia() {
-    this.isLoading = true;
-    this.renderLoading();
-
-    try {
-      const mediaResponse = await api.getMedia(this.filters);
-
-      // Mise à jour pour gérer la nouvelle structure de réponse
-      this.media = mediaResponse?.data || [];
-      this.filteredMedia = [...this.media];
-    } catch (error) {
-      console.error("Erreur chargement:", error);
-      this.showToast(CONFIG.MESSAGES.LOAD_ERROR, "error");
-    }
-
-    this.isLoading = false;
-    this.render();
+    this.fetchFilteredMedia("/media");
   }
 
   // Charger le stockage
@@ -174,6 +130,24 @@ class GalleryApp {
     }
   }
 
+  async loadFavorite() {
+    this.isLoading = true;
+    this.renderLoading();
+
+    try {
+      const favoriteData = await api.getFavorite();
+      if (favoriteData.success) {
+        this.media = favoriteData?.data || [];
+        this.filteredMedia = [...this.media];
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement du stockage:", error);
+    }
+
+    this.isLoading = false;
+    this.render();
+  }
+
   // Changer la vue active
   setActiveView(view) {
     document
@@ -184,12 +158,12 @@ class GalleryApp {
     switch (view) {
       case "albums":
         // Rediriger vers la page albums
-        window.location.href = "/albums/";
+        //window.location.href = "/albums/";
         return;
 
       case "favorites":
         // Faire une requête API pour les favoris
-        this.fetchFilteredMedia("/favoris");
+        this.loadFavorite();
         break;
 
       case "trash":
@@ -198,17 +172,10 @@ class GalleryApp {
         break;
 
       case "photos":
+        this.loadMedia();
+        break;
       default:
-        // Recharger tous les médias
-        this.loadMedia().then(() => {
-          this.currentView = "photos";
-          // Filtrer pour ne montrer que les images
-          this.filteredMedia = this.media.filter(
-            (item) => !item.isTrashed && item.type === "image"
-          );
-          this.render();
-          this.updatePageTitle();
-        });
+        this.loadMedia();
         break;
     }
 
@@ -247,9 +214,7 @@ class GalleryApp {
       const response = await api.request(endpoint);
       if (response.success) {
         this.media = response.data || [];
-        console.log(this.media);
         this.filteredMedia = [...this.media];
-        console.log(this.filteredMedia);
 
         // Trier par date d'ajout la plus récente en premier
         this.filteredMedia.sort(
@@ -313,38 +278,41 @@ class GalleryApp {
   }
 
   // Supprimer un média
-  async deleteMedia(media) {
-    if (!confirm(CONFIG.MESSAGES.DELETE_CONFIRM)) return;
+  async deleteMedia(mediaId) {
+    if (this.currentView === "trash") {
+      // Confirmation pour la suppression définitive
+      if (
+        !confirm(
+          CONFIG.MESSAGES.DELETE_CONFIRM + " Cette action est irréversible."
+        )
+      )
+        return;
+    } else {
+      // Confirmation pour le déplacement vers la corbeille
+      if (!confirm(CONFIG.MESSAGES.DELETE_CONFIRM)) return;
+    }
 
     try {
       let response;
 
       if (this.currentView === "trash") {
         // Suppression définitive depuis la corbeille
-        response = await api.deletePermanently(media.id);
+        response = await api.deletePermanently(mediaId);
       } else {
         // Déplacement vers la corbeille
-        response = await api.deleteMedia(media.id);
+        response = await api.deleteMedia(mediaId);
       }
 
       if (response.success) {
         // Mettre à jour les listes
-        this.media = this.media.filter((m) => m.id !== media.id);
-        this.filteredMedia = this.filteredMedia.filter(
-          (m) => m.id !== media.id
-        );
+        this.filteredMedia = this.filteredMedia.filter((m) => m.id !== mediaId);
 
-        this.navigateLightbox(-1);
-
-        // Recharger les données
-        if (this.currentView === "trash") {
-          await this.fetchFilteredMedia("/api/trash");
-        } else {
-          await this.loadMedia();
+        if (this.currentLightboxIndex > -1) {
+          if (this.currentLightboxIndex === 0) this.navigateLightbox(1);
+          else this.navigateLightbox(-1);
         }
 
-        // Mettre à jour le stockage
-        await this.loadStorage();
+        this.refreshMedia();
 
         // Afficher un message de succès
         this.showToast(
@@ -368,25 +336,42 @@ class GalleryApp {
     }
   }
 
-  // Télécharger un média
-  downloadMedia(media) {
-    try {
-      const url = CONFIG.BASE_URL + media.path;
+  refreshMedia() {
+    this.setActiveView(this.currentView);
+  }
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = media.name || "image";
-      link.target = "_blank";
+  getIndexMediaById(id) {
+    return this.filteredMedia.findIndex((m) => m.id === id);
+  }
+  getMediaById(id) {
+    return this.filteredMedia.find((m) => m.id === id);
+  }
+  // ================================
+  // FAVORIS
+  // ================================
 
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      this.showToast(CONFIG.MESSAGES.DOWNLOAD_START, "success");
-    } catch (error) {
-      console.error("Erreur lors du téléchargement:", error);
-      this.showToast(CONFIG.MESSAGES.DOWNLOAD_ERROR, "error");
+  changeMediaFavorite(mediaId) {
+    const media = this.getMediaById(mediaId);
+    if (media.favorite) {
+      api.removeMediaFavorite(media);
+    } else {
+      api.setMediaFavorite(media);
     }
+
+    this.filteredMedia.forEach((m) => {
+      if (m.id === mediaId) {
+        m.favorite = !m.favorite;
+      }
+    });
+
+    if (this.currentLightboxIndex > -1) {
+      const favoriteIcon = document.querySelector(`.favorite-icon`);
+      if (favoriteIcon) {
+        favoriteIcon.style.fill = media.favorite ? "currentColor" : "none";
+      }
+    }
+
+    this.refreshMedia();
   }
 
   // ================================
@@ -459,6 +444,7 @@ class GalleryApp {
     const videoCount = this.filteredMedia.filter(
       (m) => m.type === "video"
     ).length;
+
     // Stats
     if (statsEl) {
       statsEl.innerHTML = `
@@ -499,14 +485,15 @@ class GalleryApp {
             `;
       return;
     }
-    console.log(this.filteredMedia);
+    
     // Grille des médias
     container.innerHTML = this.filteredMedia
       .map(
         (media, index) => `
             <div class="photo-item" data-id="${
               media.id
-            }" onclick="app.openLightbox(${index})">
+            }" data-index="${index}" data-tooltip="Cliquez pour agrandir" 
+                 onclick="app.openLightbox(${index})" oncontextmenu="app.showContextMenu(event, ${index})">
                 ${
                   media.type === "video"
                     ? `
@@ -537,6 +524,15 @@ class GalleryApp {
                     }')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                             <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <div class="favorite-overlay ${
+                  media.favorite ? "item-favorite" : ""
+                }">
+                    <button class="favorite-btn">
+                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                         </svg>
                     </button>
                 </div>
@@ -625,6 +621,13 @@ class GalleryApp {
     }</p>
                 </div>
                 <div class="lightbox-actions">
+                    <button class="lightbox-btn" onclick="app.changeMediaFavorite(app.filteredMedia[${index}].id)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path class="favorite-icon" stroke="currentColor" fill="${
+                              media.favorite ? "currentColor" : "none"
+                            }" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.78-8.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                    </button>
                     <button class="lightbox-btn" onclick="app.toggleInfoPanel()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -632,14 +635,19 @@ class GalleryApp {
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
                     </button>
-                    <button class="lightbox-btn" onclick="app.downloadMedia(app.filteredMedia[${index}])">
+                    <button class="lightbox-btn" onclick="app.downloadMedia(app.filteredMedia[${index}].id)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
                     </button>
-                    <button class="lightbox-btn danger" onclick="app.deleteMedia(app.filteredMedia[${index}])">
+                    <button class="lightbox-btn" onclick="app.shareMedia(app.filteredMedia[${index}].id)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/>
+                        </svg>
+                    </button>
+                    <button class="lightbox-btn danger" onclick="app.deleteMedia(app.filteredMedia[${index}].id)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -693,6 +701,7 @@ class GalleryApp {
     this.currentLightboxIndex = -1;
     document.body.style.overflow = "";
     document.getElementById("lightbox")?.classList.remove("active");
+    this.refreshMedia();
   }
 
   navigateLightbox(direction) {
@@ -735,6 +744,120 @@ class GalleryApp {
       toast.classList.add("fade-out");
       setTimeout(() => toast.remove(), 300);
     }, CONFIG.UI.TOAST_DURATION);
+  }
+
+  // ================================
+  // MENU CONTEXTUEL
+  // ================================
+
+  showContextMenu(event, index) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const media = this.filteredMedia[index];
+    if (!media) return false;
+
+    // Stocker l'index du média pour les actions ultérieures
+    this.contextMenuMediaIndex = index;
+
+    // Afficher le menu contextuel
+    if (window.contextMenu) {
+      window.contextMenu.show(event, media, this);
+    }
+
+    return false;
+  }
+
+  // Télécharger un média
+  async downloadMedia(mediaId) {
+    const media = this.getMediaById(mediaId);
+    if (!media) return;
+
+    try {
+      const response = await fetch(CONFIG.BASE_URL + media.path);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        media.filename ||
+        `media-${media.id}${media.type === "image" ? ".jpg" : ".mp4"}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      this.showToast("Téléchargement démarré", "success");
+    } catch (error) {
+      console.error("Erreur lors du téléchargement:", error);
+      this.showToast("Erreur lors du téléchargement", "error");
+    }
+  }
+
+  // Partager un média
+  async shareMedia(mediaId) {
+    const media = this.getMediaById(mediaId);
+    if (!media) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: media.title || "Média partagé",
+          text: media.description || "Regardez ce média",
+          url: media.url,
+        });
+      } else {
+        // Fallback pour les navigateurs qui ne supportent pas l'API Web Share
+        await navigator.clipboard.writeText(media.url);
+        this.showToast("Lien copié dans le presse-papier", "info");
+      }
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("Erreur lors du partage:", error);
+      }
+    }
+  }
+
+  // Afficher la boîte de dialogue pour ajouter à un album
+  showAddToAlbumDialog(mediaId) {
+    // Implémentez la logique pour afficher une boîte de dialogue de sélection d'album
+    this.showToast("Fonctionnalité à venir: Ajout à un album", "info");
+  }
+
+  // Restaurer un média depuis la corbeille
+  async restoreFromTrash(mediaId) {
+    // Confirmation pour la restauration
+    if (!confirm("Êtes-vous sûr de vouloir restaurer ce média ?")) return;
+
+    try {
+      const response = await api.restoreFromTrash(mediaId);
+
+      if (response && response.success) {
+        // Mettre à jour la liste des médias
+        this.filteredMedia = this.filteredMedia.filter((m) => m.id !== mediaId);
+
+        // Recharger les données
+        this.refreshMedia();
+
+        // Fermer le lightbox s'il est ouvert
+        if (this.currentLightboxIndex > -1) {
+          this.closeLightbox();
+        }
+
+        this.showToast(
+          response.message || "Média restauré avec succès",
+          "success"
+        );
+      } else {
+        throw new Error(
+          response?.message || "Erreur lors de la restauration du média"
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de la restauration du média:", error);
+      this.showToast(
+        error.message || "Erreur lors de la restauration du média",
+        "error"
+      );
+    }
   }
 }
 

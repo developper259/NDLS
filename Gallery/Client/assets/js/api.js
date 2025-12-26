@@ -3,161 +3,200 @@
 // ================================
 
 class ApiService {
-    constructor() {
-        this.baseUrl = CONFIG.API_BASE_URL;
+  constructor() {
+    this.baseUrl = CONFIG.API_BASE_URL;
+  }
+
+  // Requête générique
+  async request(endpoint, options = {}) {
+    const url = CONFIG.getApiUrl(endpoint, options.params || {});
+
+    const defaultHeaders = {
+      "Content-Type": "application/json",
+    };
+
+    const config = {
+      method: options.method || "GET",
+      headers: { ...defaultHeaders, ...options.headers },
+    };
+
+    if (options.body) {
+      config.body =
+        options.body instanceof FormData
+          ? options.body
+          : JSON.stringify(options.body);
+
+      if (options.body instanceof FormData) {
+        delete config.headers["Content-Type"];
+      }
     }
 
-    // Requête générique
-    async request(endpoint, options = {}) {
-        const url = CONFIG.getApiUrl(endpoint, options.params || {});
-        
-        const defaultHeaders = {
-            'Content-Type': 'application/json'
-        };
+    console.log("API Request:", url, config);
 
-        const config = {
-            method: options.method || 'GET',
-            headers: { ...defaultHeaders, ...options.headers }
-        };
+    try {
+      const response = await fetch(url, config);
 
-        if (options.body) {
-            config.body = options.body instanceof FormData 
-                ? options.body 
-                : JSON.stringify(options.body);
-            
-            if (options.body instanceof FormData) {
-                delete config.headers['Content-Type'];
-            }
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+      console.log(response);
+      const data = await response.json();
+      console.log("API Response:", data);
+      return data;
+    } catch (error) {
+      console.log("API Error:", error);
+      throw error;
+    }
+  }
+
+  // Récupérer tous les médias
+  async getMedia() {
+    return this.request(CONFIG.ENDPOINTS.MEDIA);
+  }
+
+  async getFavorite() {
+    return this.request(CONFIG.ENDPOINTS.FAVORITES + "/media");
+  }
+
+  async setMediaFavorite(item) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", CONFIG.getApiUrl(CONFIG.ENDPOINTS.FAVORITES + "/media"));
+
+      // On définit le header pour dire qu'on envoie du JSON
+      xhr.setRequestHeader("Content-Type", "application/json");
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            resolve({ success: true });
+          }
+        } else {
+          reject(new Error(`Request failed: ${xhr.status}`));
         }
+      });
+      
+      // On envoie un objet JSON stringifié au lieu de FormData
+      xhr.send(JSON.stringify({ mediaId: item.id }));
+    });
+  }
+  async removeMediaFavorite(item) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(
+        "DELETE",
+        CONFIG.getApiUrl(CONFIG.ENDPOINTS.FAVORITES + "/media")
+      );
 
-        console.log('API Request:', url, config);
+      // On définit le header pour dire qu'on envoie du JSON
+      xhr.setRequestHeader("Content-Type", "application/json");
 
-        try {
-            const response = await fetch(url, config);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status}`);
-            }
-            console.log(response);
-            const data = await response.json();
-            console.log('API Response:', data);
-            return data;
-
-        } catch (error) {
-            console.log('API Error:', error);
-            throw error;
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            resolve({ success: true });
+          }
+        } else {
+          reject(new Error(`Request failed: ${xhr.status}`));
         }
-    }
+      });
 
-    // Récupérer tous les médias
-    async getMedia(filters = {}) {
-        const queryParams = new URLSearchParams();
-        
-        if (filters.type && filters.type !== 'all') {
-            queryParams.append('type', filters.type);
+      // On envoie un objet JSON stringifié au lieu de FormData
+      xhr.send(JSON.stringify({ mediaId: item.id }));
+    });
+  }
+
+  // Récupérer les infos de stockage
+  async getStorage() {
+    return this.request(CONFIG.ENDPOINTS.STORAGE);
+  }
+
+  // Upload de fichiers
+  async uploadFile(file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append("files", file);
+
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable && onProgress) {
+          const progress = Math.round((e.loaded / e.total) * 100);
+          onProgress(progress);
         }
-        if (filters.minSize) {
-            queryParams.append('minSize', filters.minSize);
+      });
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            resolve({ success: true });
+          }
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status}`));
         }
-        if (filters.maxSize) {
-            queryParams.append('maxSize', filters.maxSize);
-        }
-        if (filters.sortBy) {
-            queryParams.append('sortBy', filters.sortBy);
-        }
-        if (filters.search) {
-            queryParams.append('search', filters.search);
-        }
+      });
 
-        const endpoint = CONFIG.ENDPOINTS.MEDIA + (queryParams.toString() ? '?' + queryParams.toString() : '');
-        return this.request(endpoint);
-    }
+      xhr.addEventListener("error", (e) => {
+        reject(new Error("Upload failed"));
+      });
 
-    // Récupérer les infos de stockage
-    async getStorage() {
-        return this.request(CONFIG.ENDPOINTS.STORAGE);
-    }
+      xhr.open("POST", CONFIG.getApiUrl(CONFIG.ENDPOINTS.UPLOAD));
+      xhr.send(formData);
+    });
+  }
 
-    // Upload de fichiers
-    async uploadFile(file, onProgress) {
-        return new Promise((resolve, reject) => {
-            const formData = new FormData();
-            formData.append('files', file);
+  // Supprimer un média (déplacer vers la corbeille)
+  async deleteMedia(id) {
+    return this.request(`${CONFIG.ENDPOINTS.MEDIA}/${id}`, {
+      method: "DELETE",
+    });
+  }
 
-            const xhr = new XMLHttpRequest();
-            
-            xhr.upload.addEventListener('progress', (e) => {
-                if (e.lengthComputable && onProgress) {
-                    const progress = Math.round((e.loaded / e.total) * 100);
-                    onProgress(progress);
-                }
-            });
+  // Récupérer les médias dans la corbeille
+  async getTrash() {
+    return this.request(CONFIG.ENDPOINTS.TRASH);
+  }
 
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        resolve(response);
-                    } catch (e) {
-                        resolve({ success: true });
-                    }
-                } else {
-                    reject(new Error(`Upload failed: ${xhr.status}`));
-                }
-            });
+  // Restaurer un média depuis la corbeille
+  async restoreFromTrash(id) {
+    return this.request(`${CONFIG.ENDPOINTS.TRASH}/restore/${id}`, {
+      method: "POST",
+    });
+  }
 
-            xhr.addEventListener('error', (e) => {
-                reject(new Error('Upload failed'));
-            });
+  // Supprimer définitivement un média
+  async deletePermanently(id) {
+    return this.request(`${CONFIG.ENDPOINTS.TRASH}/${id}`, {
+      method: "DELETE",
+    });
+  }
 
-            xhr.open('POST', CONFIG.getApiUrl(CONFIG.ENDPOINTS.UPLOAD));
-            xhr.send(formData);
-        });
-    }
+  // Vider la corbeille
+  async emptyTrash() {
+    return this.request(CONFIG.ENDPOINTS.TRASH, {
+      method: "DELETE",
+    });
+  }
 
-    // Supprimer un média (déplacer vers la corbeille)
-    async deleteMedia(id) {
-        return this.request(`${CONFIG.ENDPOINTS.MEDIA}/${id}`, {
-            method: 'DELETE'
-        });
-    }
-
-    // Récupérer les médias dans la corbeille
-    async getTrash() {
-        return this.request(CONFIG.ENDPOINTS.TRASH);
-    }
-
-    // Restaurer un média depuis la corbeille
-    async restoreFromTrash(id) {
-        return this.request(`${CONFIG.ENDPOINTS.TRASH}/restore/${id}`, {
-            method: 'POST'
-        });
-    }
-
-    // Supprimer définitivement un média
-    async deletePermanently(id) {
-        return this.request(`${CONFIG.ENDPOINTS.TRASH}/${id}`, {
-            method: 'DELETE'
-        });
-    }
-
-    // Vider la corbeille
-    async emptyTrash() {
-        return this.request(CONFIG.ENDPOINTS.TRASH, {
-            method: 'DELETE'
-        });
-    }
-
-    // Télécharger un média
-    downloadMedia(media) {
-        const link = document.createElement('a');
-        link.href = media.url;
-        link.download = media.name || 'download';
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+  // Télécharger un média
+  downloadMedia(media) {
+    const link = document.createElement("a");
+    link.href = config.BASE_URL + media.path;
+    link.download = media.name || "download";
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }
 
 // Instance globale

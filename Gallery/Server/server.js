@@ -50,6 +50,9 @@ const startServer = async () => {
     await fs.ensureDir(config.paths.thumbs);
     await fs.ensureDir(config.paths.tmp);
 
+    const album = require("./addon/album");
+    await album.createFavoriteAlbum();
+
     // Démarrer le serveur
     app.listen(PORT, () => {
       console.log(`Serveur démarré sur le port ${PORT}`);

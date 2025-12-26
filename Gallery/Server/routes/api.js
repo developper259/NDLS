@@ -125,6 +125,13 @@ router.delete("/albums/:id", albumController.deleteAlbum);
  * @desc    Ajouter des médias à un album
  * @access  Private
  */
+router.get("/albums/:albumId/media", albumController.getMediaFromAlbum);
+
+/**
+ * @route   POST /api/albums/:albumId/media
+ * @desc    Ajouter des médias à un album
+ * @access  Private
+ */
 router.post("/albums/:albumId/media", albumController.addMediaToAlbum);
 
 /**

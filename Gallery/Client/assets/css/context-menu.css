@@ -1,0 +1,73 @@
+/* Menu contextuel personnalisé */
+[data-tooltip] {
+    cursor: pointer;
+}
+
+.context-menu {
+    position: fixed;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    z-index: 1000;
+    min-width: 220px;
+    opacity: 0;
+    transform: scale(0.95);
+    transform-origin: top left;
+    transition: opacity 0.1s ease, transform 0.1s ease;
+    pointer-events: none;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.context-menu.visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.context-menu-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #333;
+    transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.context-menu-item i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+    color: #666;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background-color: #eee;
+    margin: 4px 0;
+}
+
+.context-menu-item.danger {
+    color: #e74c3c;
+}
+
+.context-menu-item.danger i {
+    color: #e74c3c;
+}
+
+.context-menu-item.favorite i {
+    color: #f1c40f;
+}
+
+/* Icônes SVG inline */
+.icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 10px;
+    fill: currentColor;
+}
