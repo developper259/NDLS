@@ -14,6 +14,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
     <!-- Styles -->
     <link rel="stylesheet" href="assets/css/style.css">
@@ -29,11 +30,7 @@
             <div class="header-left">
                 <!-- Mobile menu toggle -->
                 <button class="sidebar-toggle" id="sidebar-toggle">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                    </svg>
+                    <span class="material-icons">menu</span>
                 </button>
                 
                 <!-- Logo -->
@@ -45,10 +42,7 @@
             
             <div class="header-center">
                 <div class="search-box">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
+                    <span class="material-icons">search</span>
                     <input 
                         type="text" 
                         id="search-input" 
@@ -59,6 +53,24 @@
             </div>
             
             <div class="header-right">
+                <!-- Bouton plus avec menu déroulant -->
+                <div class="dropdown-container">
+                    <button class="btn-plus" id="btn-plus">
+                        <span class="material-icons">add</span>
+                    </button>
+                    
+                    <div class="dropdown-menu" id="dropdown-menu">
+                        <button class="dropdown-item" id="import-file">
+                            <span class="material-icons">upload</span>
+                            Importer un fichier
+                        </button>
+                        <button class="dropdown-item" id="create-album">
+                            <span class="material-icons">create_new_folder</span>
+                            Créer un album
+                        </button>
+                    </div>
+                </div>
+                
                 <button class="user-avatar">U</button>
             </div>
         </header>

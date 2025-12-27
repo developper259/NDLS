@@ -12,13 +12,18 @@ class GalleryApp {
     this.currentView = "photos"; // 'photos', 'albums', 'favorites', 'trash'
     this.isLoading = true;
 
+    this.albumManager = new AlbumManager(this);
+
     this.init();
   }
 
   // Initialisation
   async init() {
     this.bindEvents();
-    Promise.all([this.loadMedia(), this.loadStorage()]);
+    this.initDropdown();
+    Promise.all([this.loadMedia(), this.loadStorage()]).then(() => {
+      this.isLoading = false;
+    });
     this.render();
   }
 
@@ -155,10 +160,12 @@ class GalleryApp {
       .forEach((btn) => btn.classList.remove("active"));
     document.getElementById(`nav-${view}`)?.classList.add("active");
 
+    window.albumManager.currentAlbumId = null;
+    window.albumManager.hideAlbumTitle();
+
     switch (view) {
       case "albums":
-        // Rediriger vers la page albums
-        //window.location.href = "/albums/";
+        this.albumManager.loadAlbums();
         return;
 
       case "favorites":
@@ -190,6 +197,10 @@ class GalleryApp {
     }
   }
 
+  setFilteredMedia(media) {
+    this.filteredMedia = media;
+  }
+
   // Mettre à jour le titre de la page en fonction de la vue active
   updatePageTitle() {
     const titles = {
@@ -214,7 +225,7 @@ class GalleryApp {
       const response = await api.request(endpoint);
       if (response.success) {
         this.media = response.data || [];
-        this.filteredMedia = [...this.media];
+        this.setFilteredMedia([...this.media]);
 
         // Trier par date d'ajout la plus récente en premier
         this.filteredMedia.sort(
@@ -375,6 +386,316 @@ class GalleryApp {
   }
 
   // ================================
+  // MENU DÉROULANT
+  // ================================
+
+  /**
+   * Initialise le menu déroulant du header
+   */
+  initDropdown() {
+    const btnPlus = document.getElementById("btn-plus");
+    const dropdownMenu = document.getElementById("dropdown-menu");
+
+    if (!btnPlus || !dropdownMenu) return;
+
+    // Toggle menu
+    btnPlus.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle("show");
+    });
+
+    // Fermer le menu en cliquant à l'extérieur
+    document.addEventListener("click", (e) => {
+      if (!dropdownMenu.contains(e.target) && e.target !== btnPlus) {
+        dropdownMenu.classList.remove("show");
+      }
+    });
+
+    // Gérer les actions du menu
+    document.getElementById("import-file")?.addEventListener("click", () => {
+      dropdownMenu.classList.remove("show");
+      this.handleImportFile();
+    });
+
+    document.getElementById("create-album")?.addEventListener("click", () => {
+      dropdownMenu.classList.remove("show");
+      this.handleCreateAlbum();
+    });
+  }
+
+  /**
+   * Gère l'importation de fichier
+   */
+  async handleImportFile() {
+    // Ouvre le sélecteur de fichiers
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.accept = "image/*,video/*";
+
+    input.addEventListener("change", (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length > 0) {
+        this.handleUpload(files);
+      }
+    });
+
+    input.click();
+  }
+
+  /**
+   * Gère la création d'album
+   */
+  async handleCreateAlbum() {
+    const albumName = await this.openInputText(
+      "Nouvel album",
+      "Entrez le nom de l'album...",
+      "Créer"
+    );
+
+    if (albumName) {
+      try {
+        const response = await api.createAlbum({ name: albumName });
+        if (response.success) {
+          this.showToast(`Album "${albumName}" créé avec succès`, "success");
+          // Recharger les albums si on est dans la vue albums
+          if (this.currentView === "albums") {
+            this.albumManager.loadAlbums();
+          }
+        } else {
+          throw new Error(response.message || "Erreur lors de la création");
+        }
+      } catch (error) {
+        this.showToast(
+          error.message || "Erreur lors de la création de l'album",
+          "error"
+        );
+      }
+    }
+  }
+
+  // ================================
+  // UTILITAIRES
+  // ================================
+
+  /**
+   * Ouvre une popup de saisie de texte
+   * @param {string} title - Titre de la popup
+   * @param {string} placeholder - Placeholder du champ de saisie
+   * @param {string} confirmText - Texte du bouton de confirmation
+   * @returns {Promise<string|null>} - La valeur saisie ou null si annulé
+   */
+  async openInputText(
+    title = "Saisir un texte",
+    placeholder = "Entrez votre texte...",
+    confirmText = "Créer"
+  ) {
+    return new Promise((resolve) => {
+      // Créer l'overlay
+      const overlay = document.createElement("div");
+      overlay.className = "input-popup-overlay";
+
+      // Créer la popup
+      const popup = document.createElement("div");
+      popup.className = "input-popup";
+
+      popup.innerHTML = `
+        <h3>${title}</h3>
+        <input 
+          type="text" 
+          class="input-popup-field"
+          placeholder="${placeholder}"
+          autocomplete="off"
+        >
+        <div class="button-group">
+          <button class="input-popup-cancel btn-secondary">Annuler</button>
+          <button class="input-popup-confirm btn-primary">${confirmText}</button>
+        </div>
+      `;
+
+      // Ajouter la popup au DOM
+      overlay.appendChild(popup);
+      document.body.appendChild(overlay);
+
+      // Focus sur le champ de saisie
+      const input = popup.querySelector(".input-popup-field");
+      input.focus();
+
+      // Gérer les événements
+      const handleSubmit = () => {
+        const value = input.value.trim();
+        cleanup();
+        resolve(value || null);
+      };
+
+      const handleCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      const handleKeydown = (e) => {
+        if (e.key === "Enter") {
+          handleSubmit();
+        } else if (e.key === "Escape") {
+          handleCancel();
+        }
+      };
+
+      const cleanup = () => {
+        document.removeEventListener("keydown", handleKeydown);
+        overlay.remove();
+      };
+
+      // Attacher les événements
+      popup
+        .querySelector(".input-popup-confirm")
+        .addEventListener("click", handleSubmit);
+      popup
+        .querySelector(".input-popup-cancel")
+        .addEventListener("click", handleCancel);
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          handleCancel();
+        }
+      });
+      document.addEventListener("keydown", handleKeydown);
+
+      // Empêcher la propagation du clic sur la popup
+      popup.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    });
+  }
+
+  /**
+   * Ouvre un sélecteur d'albums
+   * @param {string} title - Titre de la popup
+   * @param {Array} items - Liste des éléments à afficher
+   * @param {string} confirmText - Texte du bouton de confirmation
+   * @returns {Promise<Object|null>} - L'élément choisi ou null si annulé
+   */
+  async openItemSelector(
+    title = "Sélectionner un élément",
+    items = [],
+    confirmText = "Sélectionner"
+  ) {
+    return new Promise((resolve) => {
+      // Créer l'overlay
+      const overlay = document.createElement("div");
+      overlay.className = "input-popup-overlay";
+
+      // Créer la popup
+      const popup = document.createElement("div");
+      popup.className = "input-popup";
+
+      // Générer la liste des éléments
+      const itemsList = items
+        .map(
+          (item) => `
+        <div class="album-selector-item" data-itemId="${item.id}">
+          <div class="album-selector-thumbnail">
+            <img src="${
+              item.thumbnail.startsWith("data:")
+                ? item.thumbnail
+                : `${CONFIG.BASE_URL + item.thumbnail}`
+            }" alt="${item.name}" loading="lazy">
+          </div>
+          <div class="album-selector-info">
+            <div class="album-selector-name">${item.name}</div>
+            <div class="album-selector-count">${item.mediaCount || 0} média${
+            item.mediaCount !== 1 ? "s" : ""
+          }</div>
+          </div>
+        </div>
+      `
+        )
+        .join("");
+
+      popup.innerHTML = `
+        <h3>${title}</h3>
+        <div class="album-selector-list">
+          ${
+            itemsList ||
+            '<div class="album-selector-empty">Aucun élément disponible</div>'
+          }
+        </div>
+        <div class="button-group">
+          <button class="input-popup-cancel btn-secondary">Annuler</button>
+          <button class="album-selector-confirm btn-primary" disabled>${confirmText}</button>
+        </div>
+      `;
+
+      // Ajouter la popup au DOM
+      overlay.appendChild(popup);
+      document.body.appendChild(overlay);
+
+      let selectedAlbum = null;
+
+      // Gérer les événements
+      const handleConfirm = () => {
+        cleanup();
+        resolve(selectedAlbum);
+      };
+
+      const handleCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      const handleKeydown = (e) => {
+        if (e.key === "Enter" && selectedAlbum) {
+          handleConfirm();
+        } else if (e.key === "Escape") {
+          handleCancel();
+        }
+      };
+
+      const cleanup = () => {
+        document.removeEventListener("keydown", handleKeydown);
+        overlay.remove();
+      };
+
+      // Gérer la sélection d'album
+      const albumItems = popup.querySelectorAll(".album-selector-item");
+      const confirmBtn = popup.querySelector(".album-selector-confirm");
+
+      albumItems.forEach((item) => {
+        item.addEventListener("click", () => {
+          // Désélectionner l'item précédent
+          popup
+            .querySelectorAll(".album-selector-item")
+            .forEach((i) => i.classList.remove("selected"));
+
+          // Sélectionner le nouvel item
+          item.classList.add("selected");
+          selectedAlbum = items.find(
+            (itm) => parseInt(itm.id) === parseInt(item.dataset.itemid)
+          );
+          // Activer le bouton de confirmation
+          confirmBtn.disabled = false;
+        });
+      });
+
+      // Attacher les événements
+      confirmBtn.addEventListener("click", handleConfirm);
+      popup
+        .querySelector(".input-popup-cancel")
+        .addEventListener("click", handleCancel);
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          handleCancel();
+        }
+      });
+      document.addEventListener("keydown", handleKeydown);
+
+      // Empêcher la propagation du clic sur la popup
+      popup.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    });
+  }
+
+  // ================================
   // RENDU
   // ================================
 
@@ -417,11 +738,7 @@ class GalleryApp {
 
     storageEl.innerHTML = `
             <div class="storage-header">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-                </svg>
+                <span class="material-icons">storage</span>
                 <span>${CONFIG.MESSAGES.STORAGE}</span>
             </div>
             <div class="storage-bar ${statusClass}">
@@ -432,12 +749,7 @@ class GalleryApp {
             </p>`;
   }
 
-  renderGallery() {
-    const container = document.getElementById("photo-grid");
-    const statsEl = document.getElementById("media-stats");
-    if (!container) return;
-
-    // Mise à jour pour gérer les types 'image' et 'video' au lieu de 'photo' et 'video'
+  renderCount() {
     const photoCount = this.filteredMedia.filter(
       (m) => m.type === "image"
     ).length;
@@ -445,47 +757,45 @@ class GalleryApp {
       (m) => m.type === "video"
     ).length;
 
+    const statsEl = document.getElementById("media-stats");
     // Stats
     if (statsEl) {
       statsEl.innerHTML = `
                 <div class="stat">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
+                    <span class="material-icons">image</span>
                     <span><strong>${photoCount}</strong> ${
         photoCount !== 1 ? CONFIG.MESSAGES.PHOTOS : CONFIG.MESSAGES.PHOTO
       }</span>
                 </div>
                 <div class="stat">
-                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                    </svg>
+                    <span class="material-icons">videocam</span>
                     <span><strong>${videoCount}</strong> ${
         videoCount !== 1 ? CONFIG.MESSAGES.VIDEOS : CONFIG.MESSAGES.VIDEO
       }</span>
                 </div>
             `;
     }
+  }
+
+  renderGallery() {
+    const container = document.getElementById("photo-grid");
+    if (!container) return;
+
+    // Mise à jour pour gérer les types 'image' et 'video' au lieu de 'photo' et 'video'
+    this.renderCount();
 
     // Grille vide
     if (this.filteredMedia.length === 0) {
       container.innerHTML = `
                 <div class="empty-state">
-                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                        <polyline points="21 15 16 10 5 21"></polyline>
-                    </svg>
+                    <span class="material-icons empty-icon">image_search</span>
                     <p class="empty-title">${CONFIG.MESSAGES.NO_MEDIA}</p>
                     <p class="empty-desc">${CONFIG.MESSAGES.NO_MEDIA_DESC}</p>
                 </div>
             `;
       return;
     }
-    
+
     // Grille des médias
     container.innerHTML = this.filteredMedia
       .map(
@@ -498,10 +808,7 @@ class GalleryApp {
                   media.type === "video"
                     ? `
                     <div class="video-badge">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                        </svg>
+                        <span class="material-icons">videocam</span>
                         ${
                           media.duration
                             ? CONFIG.formatDuration(media.duration)
@@ -522,18 +829,14 @@ class GalleryApp {
                     <button class="select-btn" onclick="event.stopPropagation(); app.toggleSelect('${
                       media.id
                     }')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
+                        <span class="material-icons">check</span>
                     </button>
                 </div>
                 <div class="favorite-overlay ${
                   media.favorite ? "item-favorite" : ""
                 }">
                     <button class="favorite-btn">
-                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
-                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                        </svg>
+                        <span class="material-icons">favorite</span>
                     </button>
                 </div>
             </div>
@@ -567,19 +870,14 @@ class GalleryApp {
     lightbox.innerHTML = `
             <div class="lightbox-backdrop" onclick="app.closeLightbox()"></div>
             <button class="lightbox-close" onclick="app.closeLightbox()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <span class="material-icons">close</span>
             </button>
             
             ${
               hasPrev
                 ? `
                 <button class="lightbox-nav prev" onclick="event.stopPropagation(); app.navigateLightbox(-1)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                    </svg>
+                    <span class="material-icons">chevron_left</span>
                 </button>
             `
                 : ""
@@ -589,9 +887,7 @@ class GalleryApp {
               hasNext
                 ? `
                 <button class="lightbox-nav next" onclick="event.stopPropagation(); app.navigateLightbox(1)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
+                    <span class="material-icons">chevron_right</span>
                 </button>
             `
                 : ""
@@ -622,36 +918,19 @@ class GalleryApp {
                 </div>
                 <div class="lightbox-actions">
                     <button class="lightbox-btn" onclick="app.changeMediaFavorite(app.filteredMedia[${index}].id)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path class="favorite-icon" stroke="currentColor" fill="${
-                              media.favorite ? "currentColor" : "none"
-                            }" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.78-8.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                        </svg>
+                        <span class="material-icons">favorite_border</span>
                     </button>
                     <button class="lightbox-btn" onclick="app.toggleInfoPanel()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
+                        <span class="material-icons">info</span>
                     </button>
                     <button class="lightbox-btn" onclick="app.downloadMedia(app.filteredMedia[${index}].id)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
+                        <span class="material-icons">download</span>
                     </button>
                     <button class="lightbox-btn" onclick="app.shareMedia(app.filteredMedia[${index}].id)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/>
-                        </svg>
+                        <span class="material-icons">share</span>
                     </button>
                     <button class="lightbox-btn danger" onclick="app.deleteMedia(app.filteredMedia[${index}].id)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
+                        <span class="material-icons">delete</span>
                     </button>
                 </div>
             </div>
@@ -817,9 +1096,35 @@ class GalleryApp {
   }
 
   // Afficher la boîte de dialogue pour ajouter à un album
-  showAddToAlbumDialog(mediaId) {
-    // Implémentez la logique pour afficher une boîte de dialogue de sélection d'album
-    this.showToast("Fonctionnalité à venir: Ajout à un album", "info");
+  async AddToAlbum(mediaId) {
+    // Charger les albums existants
+    const albums = await this.albumManager.getAlbums();
+
+    console.log("Albums chargés:", albums);
+
+    // Ouvrir le sélecteur d'albums
+    const selectedAlbum = await this.openItemSelector(
+      "Ajouter à un album",
+      albums,
+      "Ajouter"
+    );
+
+    if (selectedAlbum) {
+      // Ajouter le média à l'album sélectionné
+      try {
+        const response = await api.addMediaToAlbum(selectedAlbum.id, mediaId);
+        if (response.success) {
+          this.showToast(`Média ajouté à "${selectedAlbum.name}"`, "success");
+        } else {
+          throw new Error(response.message || "Erreur lors de l'ajout");
+        }
+      } catch (error) {
+        this.showToast(
+          error.message || "Erreur lors de l'ajout au album",
+          "error"
+        );
+      }
+    }
   }
 
   // Restaurer un média depuis la corbeille

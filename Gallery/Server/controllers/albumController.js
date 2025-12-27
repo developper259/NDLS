@@ -1,6 +1,11 @@
 const Album = require("../addon/album");
 const { getThumb } = require("../utils/fileUtils");
 
+// Générer un thumbnail de base pour les albums sans média
+const getDefaultThumbnail = () => {
+  return "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QxZDJkNSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjMiIHk9IjMiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgcng9IjIiIHJ5PSIyIj48L3JlY3Q+PGNpcmNsZSBjeD0iOC41IiBjeT0iOS41IiByPSIxLjUiPjwvY2lyY2xlPjxwb2x5bGluZSBwb2ludHM9IjIxIDE1IDE2IDEwIDUgMjEiPjwvcG9seWxpbmU+PC9zdmc+";
+};
+
 // Créer un nouvel album
 const createAlbum = async (req, res) => {
   try {
@@ -25,9 +30,32 @@ const createAlbum = async (req, res) => {
 const getAllAlbums = async (req, res) => {
   try {
     const albums = await Album.getAll();
+
+    // Ajouter le thumbnail et le nombre de médias à chaque album
+    const albumsWithThumbnails = await Promise.all(
+      albums.map(async (album) => {
+        // Récupérer le premier média de l'album
+        const media = await Album.getMedia(album.id);
+
+        let thumbnail = getDefaultThumbnail();
+        let mediaCount = media.length;
+
+        if (mediaCount > 0) {
+          // Utiliser le thumbnail du premier média
+          thumbnail = getThumb(media[0].file_path);
+        }
+
+        return {
+          ...album,
+          thumbnail,
+          mediaCount,
+        };
+      })
+    );
+
     res.json({
       success: true,
-      data: albums,
+      data: albumsWithThumbnails,
     });
   } catch (error) {
     console.error("Erreur lors de la récupération des albums:", error);
@@ -117,7 +145,7 @@ const deleteAlbum = async (req, res) => {
   }
 };
 
-// Ajouter des médias à un album
+// Ajouter un média à un album
 const addMediaToAlbum = async (req, res) => {
   try {
     const mediaId = req.body.mediaId;
@@ -127,9 +155,8 @@ const addMediaToAlbum = async (req, res) => {
         message: "ID du média requis",
       });
     }
-
     const result = await Album.addMedia(req.params.albumId, mediaId);
-    
+
     res.json({
       success: true,
       data: result,
@@ -144,7 +171,7 @@ const addMediaToAlbum = async (req, res) => {
   }
 };
 
-// Supprimer des médias d'un album
+// Supprimer un média d'un album
 const removeMediaFromAlbum = async (req, res) => {
   try {
     const mediaId = req.body.mediaId;
@@ -156,12 +183,12 @@ const removeMediaFromAlbum = async (req, res) => {
     });
   } catch (error) {
     console.error(
-      "Erreur lors de la suppression des médias de l'album:",
+      "Erreur lors de la suppression du média de l'album:",
       error
     );
     res.status(500).json({
       success: false,
-      message: "Erreur lors de la suppression des médias de l'album",
+      message: "Erreur lors de la suppression du média de l'album",
       error: process.env.NODE_ENV === "development" ? error.message : {},
     });
   }

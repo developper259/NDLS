@@ -7,10 +7,147 @@ class ApiService {
     this.baseUrl = CONFIG.API_BASE_URL;
   }
 
+  // ===== GESTION DES ALBUMS =====
+
+  /**
+   * Récupère tous les albums
+   * @returns {Promise<Array>} Liste des albums
+   */
+  async getAlbums() {
+    return this.request("/albums");
+  }
+
+  /**
+   * Récupère un album par son ID
+   * @param {string} albumId - ID de l'album
+   * @returns {Promise<Object>} Détails de l'album
+   */
+  async getAlbum(albumId) {
+    return this.request(`/albums/${albumId}`);
+  }
+
+  /**
+   * Crée un nouvel album
+   * @param {Object} albumData - Données du nouvel album
+   * @param {string} albumData.name - Nom de l'album
+   * @param {string} [albumData.description] - Description de l'album
+   * @returns {Promise<Object>} Album créé
+   */
+  async createAlbum(albumData) {
+    return this.request("/albums", {
+      method: "POST",
+      body: albumData,
+    });
+  }
+
+  /**
+   * Met à jour un album existant
+   * @param {string} albumId - ID de l'album à mettre à jour
+   * @param {Object} updateData - Données à mettre à jour
+   * @returns {Promise<Object>} Album mis à jour
+   */
+  async updateAlbum(albumId, updateData) {
+    return this.request(`/albums/${albumId}`, {
+      method: "PUT",
+      body: updateData,
+    });
+  }
+
+  /**
+   * Supprime un album
+   * @param {string} albumId - ID de l'album à supprimer
+   * @returns {Promise<Object>} Résultat de la suppression
+   */
+  async deleteAlbum(albumId) {
+    return this.request(`/albums/${albumId}`, {
+      method: "DELETE",
+    });
+  }
+
+  /**
+   * Récupère les médias d'un album
+   * @param {string} albumId - ID de l'album
+   * @returns {Promise<Array>} Liste des médias de l'album
+   */
+  async getAlbumMedia(albumId) {
+    return this.request(`/albums/${albumId}/media`);
+  }
+
+  /**
+   * Ajoute un média à un album
+   * @param {string} albumId - ID de l'album
+   * @param {string} mediaId - ID du média à ajouter
+   * @returns {Promise<Object>} Résultat de l'ajout
+   */
+  async addMediaToAlbum(albumId, mediaId) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", CONFIG.getApiUrl(CONFIG.ENDPOINTS.ALBUMS + "/" + albumId + "/media"));
+
+      // On définit le header pour dire qu'on envoie du JSON
+      xhr.setRequestHeader("Content-Type", "application/json");
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            resolve({ success: true });
+          }
+        } else {
+          reject(new Error(`Request failed: ${xhr.status}`));
+        }
+      });
+
+      // On envoie un objet JSON stringifié au lieu de FormData
+      xhr.send(JSON.stringify({ mediaId: mediaId }));
+    });
+  }
+
+  /**
+   * Supprime un média d'un album
+   * @param {string} albumId - ID de l'album
+   * @param {string} mediaId - ID du média à supprimer
+   * @returns {Promise<Object>} Résultat de la suppression
+   */
+  async removeMediaFromAlbum(albumId, mediaId) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(
+        "DELETE",
+        CONFIG.getApiUrl(CONFIG.ENDPOINTS.ALBUMS + "/" + albumId + "/media")
+      );
+
+      // On définit le header pour dire qu'on envoie du JSON
+      xhr.setRequestHeader("Content-Type", "application/json");
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            resolve({ success: true });
+          }
+        } else {
+          reject(new Error(`Request failed: ${xhr.status}`));
+        }
+      });
+
+      // On envoie un objet JSON stringifié au lieu de FormData
+      xhr.send(JSON.stringify({ mediaId: mediaId }));
+    });
+  }
+
+  // ===== FIN GESTION DES ALBUMS =====
+
   // Requête générique
   async request(endpoint, options = {}) {
     const url = CONFIG.getApiUrl(endpoint, options.params || {});
-
+    
+    console.log("Final URL:", url);
+    
     const defaultHeaders = {
       "Content-Type": "application/json",
     };
@@ -39,7 +176,6 @@ class ApiService {
       if (!response.ok) {
         throw new Error(`HTTP Error: ${response.status}`);
       }
-      console.log(response);
       const data = await response.json();
       console.log("API Response:", data);
       return data;
@@ -55,61 +191,14 @@ class ApiService {
   }
 
   async getFavorite() {
-    return this.request(CONFIG.ENDPOINTS.FAVORITES + "/media");
+    return this.getAlbumMedia(CONFIG.FAVORITES_ALBUM_ID);
   }
 
   async setMediaFavorite(item) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", CONFIG.getApiUrl(CONFIG.ENDPOINTS.FAVORITES + "/media"));
-
-      // On définit le header pour dire qu'on envoie du JSON
-      xhr.setRequestHeader("Content-Type", "application/json");
-
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
-          } catch (e) {
-            resolve({ success: true });
-          }
-        } else {
-          reject(new Error(`Request failed: ${xhr.status}`));
-        }
-      });
-      
-      // On envoie un objet JSON stringifié au lieu de FormData
-      xhr.send(JSON.stringify({ mediaId: item.id }));
-    });
+    return await this.addMediaToAlbum(CONFIG.FAVORITES_ALBUM_ID, item.id);
   }
   async removeMediaFavorite(item) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open(
-        "DELETE",
-        CONFIG.getApiUrl(CONFIG.ENDPOINTS.FAVORITES + "/media")
-      );
-
-      // On définit le header pour dire qu'on envoie du JSON
-      xhr.setRequestHeader("Content-Type", "application/json");
-
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
-          } catch (e) {
-            resolve({ success: true });
-          }
-        } else {
-          reject(new Error(`Request failed: ${xhr.status}`));
-        }
-      });
-
-      // On envoie un objet JSON stringifié au lieu de FormData
-      xhr.send(JSON.stringify({ mediaId: item.id }));
-    });
+    return await this.removeMediaFromAlbum(CONFIG.FAVORITES_ALBUM_ID, item.id);
   }
 
   // Récupérer les infos de stockage

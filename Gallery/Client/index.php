@@ -21,6 +21,17 @@ include 'includes/sidebar.php';
                     </div>
                 </div>
                 
+                <!-- Album Title -->
+                <div class="album-title-container" id="album-title-container" style="display: none;">
+                    <div class="album-title-content">
+                        <button class="back-to-albums" id="back-to-albums">
+                            <span class="material-icons">arrow_back</span>
+                            <span>Retour aux albums</span>
+                        </button>
+                        <h2 class="album-title" id="album-title"></h2>
+                    </div>
+                </div>
+                
                 <!-- Photo Grid -->
                 <div class="photo-grid" id="photo-grid">
                     <!-- Rendered by JS -->

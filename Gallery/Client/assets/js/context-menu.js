@@ -113,7 +113,7 @@ class ContextMenu {
 
   handleAddToAlbum() {
     if (this.currentApp && this.currentMedia) {
-      this.currentApp.showAddToAlbumDialog(this.currentMedia.id);
+      this.currentApp.AddToAlbum(this.currentMedia.id);
       this.hide();
     }
   }

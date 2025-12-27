@@ -15,8 +15,11 @@ const CONFIG = {
     TRASH: "/trash",
     DELETE: "/media/{id}",
     DOWNLOAD: "/media/{id}/download",
-    FAVORITES: "/albums/1",
+    ALBUMS: "/albums",
   },
+
+  // ID de l'album des favoris
+  FAVORITES_ALBUM_ID: "1",
 
   // Paramètres de la galerie
   GALLERY: {
@@ -111,6 +114,8 @@ const CONFIG = {
     PHOTO: "photo",
     VIDEOS: "vidéos",
     VIDEO: "vidéo",
+    ALBUMS: "albums",
+    ALBUM: "album",
     STORAGE: "Stockage",
     STORAGE_USED: "{used} {unit} sur {total} {unit} utilisés",
     FILTERS: "Filtres",

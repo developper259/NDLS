@@ -28,6 +28,7 @@
     </div><!-- /.app-container -->
 
     <!-- Scripts -->
+    <script src="assets/js/albums.js"></script>
     <script src="assets/js/config.js"></script>
     <script src="assets/js/api.js"></script>
     <script src="assets/js/app.js"></script>
