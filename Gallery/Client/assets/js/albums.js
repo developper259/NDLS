@@ -100,6 +100,7 @@ class AlbumManager {
   async openAlbum(albumId, event) {
     event?.preventDefault();
     this.currentAlbumId = albumId;
+    this.app.currentView = "album-view";
 
     try {
       this.app.renderLoading();
@@ -146,6 +147,7 @@ class AlbumManager {
     const titleContainer = document.getElementById("album-title-container");
     if (titleContainer) {
       titleContainer.style.display = "none";
+      this.currentAlbumId = null;
     }
   }
 

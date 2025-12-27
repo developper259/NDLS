@@ -9,7 +9,7 @@ class GalleryApp {
     this.storage = null;
     this.selectedItems = new Set();
     this.currentLightboxIndex = -1;
-    this.currentView = "photos"; // 'photos', 'albums', 'favorites', 'trash'
+    this.currentView = "photos"; // 'photos', 'albums', 'favorites', 'trash', 'album-view'
     this.isLoading = true;
 
     this.albumManager = new AlbumManager(this);
@@ -348,6 +348,10 @@ class GalleryApp {
   }
 
   refreshMedia() {
+    if (this.currentView === "album-view" && this.albumManager.currentAlbumId) {
+      this.albumManager.openAlbum(this.albumManager.currentAlbumId);
+      return;
+    }
     this.setActiveView(this.currentView);
   }
 
@@ -376,9 +380,13 @@ class GalleryApp {
     });
 
     if (this.currentLightboxIndex > -1) {
-      const favoriteIcon = document.querySelector(`.favorite-icon`);
+      const favoriteIcon = document.querySelector(
+        `.lightbox-actions .material-icons`
+      );
       if (favoriteIcon) {
-        favoriteIcon.style.fill = media.favorite ? "currentColor" : "none";
+        favoriteIcon.textContent = media.favorite
+          ? "favorite"
+          : "favorite_border";
       }
     }
 
@@ -918,7 +926,9 @@ class GalleryApp {
                 </div>
                 <div class="lightbox-actions">
                     <button class="lightbox-btn" onclick="app.changeMediaFavorite(app.filteredMedia[${index}].id)">
-                        <span class="material-icons">favorite_border</span>
+                        <span class="material-icons">${
+                          media.favorite ? "favorite" : "favorite_border"
+                        }</span>
                     </button>
                     <button class="lightbox-btn" onclick="app.toggleInfoPanel()">
                         <span class="material-icons">info</span>
@@ -1160,6 +1170,36 @@ class GalleryApp {
       console.error("Erreur lors de la restauration du média:", error);
       this.showToast(
         error.message || "Erreur lors de la restauration du média",
+        "error"
+      );
+    }
+  }
+
+  async removeFromAlbum(mediaId) {
+    try {
+      const albumId = this.albumManager.currentAlbumId;
+      const response = await api.removeMediaFromAlbum(albumId, mediaId);
+
+      if (response && response.success) {
+        // Mettre à jour la liste des médias
+        this.filteredMedia = this.filteredMedia.filter((m) => m.id !== mediaId);
+
+        // Recharger les données
+        this.refreshMedia();
+
+        this.showToast(
+          response.message || "Média retiré de l'album avec succès",
+          "success"
+        );
+      } else {
+        throw new Error(
+          response?.message || "Erreur lors du retrait du média de l'album"
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors du retrait du média de l'album:", error);
+      this.showToast(
+        error.message || "Erreur lors du retrait du média de l'album",
         "error"
       );
     }
