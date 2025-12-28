@@ -27,9 +27,10 @@ app.use("/thumbs", express.static(config.paths.thumbs));
 const apiRoutes = require("./routes/api");
 app.use("/api", apiRoutes);
 
-// Route pour toutes les autres requêtes - renvoie l'application frontend
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../Client/index.php"));
+
+// Routes API
+app.use("/health", (req, res) => {
+  res.status(200).json({ message: "OK" });
 });
 
 // Gestion des erreurs globales

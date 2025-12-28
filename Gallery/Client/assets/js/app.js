@@ -11,6 +11,7 @@ class GalleryApp {
     this.currentLightboxIndex = -1;
     this.currentView = "photos"; // 'photos', 'albums', 'favorites', 'trash', 'album-view'
     this.isLoading = true;
+    this.uploadQueue = []; // File d'upload
 
     this.albumManager = new AlbumManager(this);
 
@@ -266,26 +267,9 @@ class GalleryApp {
 
     // Traiter chaque fichier valide
     for (const file of validFiles) {
-      try {
-        this.showToast(`Upload: ${file.name}...`, "info");
-
-        const result = await api.uploadFile(file, (progress) => {
-          console.log(`Upload progress: ${progress}%`);
-        });
-
-        if (result.success) {
-          // Recharger les données après un upload réussi
-          await this.loadMedia();
-          await this.loadStorage();
-          this.showToast(CONFIG.MESSAGES.UPLOAD_SUCCESS, "success");
-        } else {
-          throw new Error(result.message || "Erreur lors de l'upload");
-        }
-      } catch (error) {
-        console.error("Erreur d'upload:", error);
-        this.showToast(error.message || CONFIG.MESSAGES.UPLOAD_ERROR, "error");
-      }
+      this.addToUploadQueue(file);
     }
+    this.processUploadQueue();
   }
 
   // Supprimer un média
@@ -1002,6 +986,201 @@ class GalleryApp {
 
   toggleInfoPanel() {
     document.getElementById("info-panel")?.classList.toggle("active");
+  }
+
+  // ================================
+  // GESTION DE LA FILE D'UPLOAD
+  // ================================
+
+  /**
+   * Ajoute un fichier à la file d'upload
+   * @param {File} file - Fichier à uploader
+   */
+  addToUploadQueue(file) {
+    const uploadItem = {
+      id: Date.now() + Math.random(),
+      file: file,
+      progress: 0,
+      status: "pending", // 'pending', 'uploading', 'completed', 'error'
+      startTime: null,
+      estimatedTimeRemaining: null,
+      error: null,
+    };
+
+    this.uploadQueue.push(uploadItem);
+    this.createUploadNotification(uploadItem);
+  }
+
+  /**
+   * Traite la file d'upload
+   */
+  async processUploadQueue() {
+    const pendingItems = this.uploadQueue.filter(
+      (item) => item.status === "pending"
+    );
+
+    for (const item of pendingItems) {
+      await this.uploadSingleFile(item);
+    }
+  }
+
+  /**
+   * Upload un fichier individuel
+   * @param {Object} uploadItem - Item d'upload
+   */
+  async uploadSingleFile(uploadItem) {
+    uploadItem.status = "uploading";
+    uploadItem.startTime = Date.now();
+    this.updateUploadNotification(uploadItem);
+
+    try {
+      const result = await api.uploadFile(uploadItem.file, (progress) => {
+        uploadItem.progress = progress;
+        this.calculateEstimatedTime(uploadItem);
+        this.updateUploadNotification(uploadItem);
+      });
+
+      if (result.success) {
+        uploadItem.status = "completed";
+        uploadItem.progress = 100;
+        this.updateUploadNotification(uploadItem);
+
+        // Recharger les données après un upload réussi
+        await this.loadMedia();
+        await this.loadStorage();
+
+        // Supprimer la notification après 3 secondes
+        setTimeout(() => {
+          this.removeUploadNotification(uploadItem.id);
+        }, 3000);
+      } else {
+        throw new Error(result.message || "Erreur lors de l'upload");
+      }
+    } catch (error) {
+      uploadItem.status = "error";
+      uploadItem.error = error.message || "Erreur lors de l'upload";
+      this.updateUploadNotification(uploadItem);
+    }
+  }
+
+  /**
+   * Calcule le temps restant estimé
+   * @param {Object} uploadItem - Item d'upload
+   */
+  calculateEstimatedTime(uploadItem) {
+    if (uploadItem.progress > 0 && uploadItem.startTime) {
+      const elapsed = Date.now() - uploadItem.startTime;
+      const totalEstimated = (elapsed / uploadItem.progress) * 100;
+      const remaining = totalEstimated - elapsed;
+      uploadItem.estimatedTimeRemaining = Math.max(0, remaining);
+    }
+  }
+
+  /**
+   * Crée une notification d'upload
+   * @param {Object} uploadItem - Item d'upload
+   */
+  createUploadNotification(uploadItem) {
+    const container = document.getElementById("upload-queue-container");
+    if (!container) {
+      const uploadContainer = document.createElement("div");
+      uploadContainer.id = "upload-queue-container";
+      uploadContainer.className = "upload-queue-container";
+      document.body.appendChild(uploadContainer);
+    }
+
+    const notification = document.createElement("div");
+    notification.id = `upload-${uploadItem.id}`;
+    notification.className = "upload-notification";
+    notification.innerHTML = `
+      <div class="upload-info">
+        <div class="upload-filename">${uploadItem.file.name}</div>
+        <div class="upload-details">
+          <span class="upload-progress-text">0%</span>
+          <span class="upload-time-remaining"></span>
+        </div>
+      </div>
+      <div class="upload-progress-circle">
+        <svg class="progress-svg" width="40" height="40">
+          <circle class="progress-bg" cx="20" cy="20" r="16"></circle>
+          <circle class="progress-bar" cx="20" cy="20" r="16"></circle>
+        </svg>
+        <div class="progress-percentage">0%</div>
+      </div>
+      <button class="upload-cancel" onclick="app.cancelUpload('${uploadItem.id}')">×</button>
+    `;
+
+    document.getElementById("upload-queue-container").appendChild(notification);
+  }
+
+  /**
+   * Met à jour une notification d'upload
+   * @param {Object} uploadItem - Item d'upload
+   */
+  updateUploadNotification(uploadItem) {
+    const notification = document.getElementById(`upload-${uploadItem.id}`);
+    if (!notification) return;
+
+    const progressText = notification.querySelector(".upload-progress-text");
+    const timeRemaining = notification.querySelector(".upload-time-remaining");
+    const progressBar = notification.querySelector(".progress-bar");
+    const progressPercentage = notification.querySelector(
+      ".progress-percentage"
+    );
+
+    if (progressText)
+      progressText.textContent = `${Math.round(uploadItem.progress)}%`;
+    if (progressPercentage)
+      progressPercentage.textContent = `${Math.round(uploadItem.progress)}%`;
+
+    if (
+      uploadItem.estimatedTimeRemaining &&
+      uploadItem.status === "uploading"
+    ) {
+      const seconds = Math.round(uploadItem.estimatedTimeRemaining / 1000);
+      if (timeRemaining) timeRemaining.textContent = `${seconds}s restantes`;
+    } else if (uploadItem.status === "completed") {
+      if (timeRemaining) timeRemaining.textContent = "Terminé";
+      notification.classList.add("upload-completed");
+    } else if (uploadItem.status === "error") {
+      if (timeRemaining)
+        timeRemaining.textContent = uploadItem.error || "Erreur";
+      notification.classList.add("upload-error");
+    }
+
+    // Mettre à jour le cercle de progression
+    if (progressBar) {
+      const circumference = 2 * Math.PI * 16;
+      const offset =
+        circumference - (uploadItem.progress / 100) * circumference;
+      progressBar.style.strokeDashoffset = offset;
+    }
+  }
+
+  /**
+   * Supprime une notification d'upload
+   * @param {string} uploadId - ID de l'upload
+   */
+  removeUploadNotification(uploadId) {
+    const notification = document.getElementById(`upload-${uploadId}`);
+    if (notification) {
+      notification.remove();
+    }
+
+    // Supprimer de la file d'attente
+    this.uploadQueue = this.uploadQueue.filter((item) => item.id !== uploadId);
+  }
+
+  /**
+   * Annule un upload
+   * @param {string} uploadId - ID de l'upload
+   */
+  cancelUpload(uploadId) {
+    const uploadItem = this.uploadQueue.find((item) => item.id == uploadId);
+    if (uploadItem) {
+      uploadItem.status = "cancelled";
+      this.removeUploadNotification(uploadId);
+    }
   }
 
   // ================================

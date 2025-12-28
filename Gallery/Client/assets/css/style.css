@@ -680,8 +680,8 @@ img {
 }
 
 .video-badge .icon {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
 }
 
 /* ================================
@@ -1597,4 +1597,155 @@ img {
 
 .album-selector-item.selected .album-selector-name {
     color: #3b82f6;
+}
+
+/* ================================
+   FILE D'UPLOAD
+   ================================ */
+.upload-queue-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 350px;
+}
+
+.upload-notification {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+    animation: slideInLeft 0.3s ease;
+}
+
+.upload-notification:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+}
+
+.upload-notification.upload-completed {
+    border-color: var(--success);
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.upload-notification.upload-error {
+    border-color: var(--danger);
+    background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+}
+
+.upload-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.upload-filename {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.upload-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+}
+
+.upload-progress-text {
+    font-weight: 500;
+    color: var(--primary);
+}
+
+.upload-time-remaining {
+    font-size: 11px;
+}
+
+.upload-progress-circle {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.progress-svg {
+    transform: rotate(-90deg);
+    width: 40px;
+    height: 40px;
+}
+
+.progress-bg {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 3;
+}
+
+.progress-bar {
+    fill: none;
+    stroke: var(--primary);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 100.48;
+    stroke-dashoffset: 100.48;
+    transition: stroke-dashoffset 0.3s ease;
+}
+
+.upload-notification.upload-completed .progress-bar {
+    stroke: var(--success);
+}
+
+.upload-notification.upload-error .progress-bar {
+    stroke: var(--danger);
+}
+
+.progress-percentage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.upload-cancel {
+    background: none;
+    border: none;
+    color: var(--muted-foreground);
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.upload-cancel:hover {
+    background: var(--muted);
+    color: var(--danger);
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
