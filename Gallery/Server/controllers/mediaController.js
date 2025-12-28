@@ -19,6 +19,24 @@ const dataPath = path.join(process.cwd(), "data");
 const mediaPath = path.join(dataPath, "media");
 const thumbsPath = path.join(dataPath, "thumbs");
 
+// Fonction pour obtenir les dimensions depuis le fichier
+const getDimension = async (filePath, fileType) => {
+  try {
+    const fullPath = path.join(dataPath, filePath);
+
+    if (fileType.startsWith("video/")) {
+      const dimensions = await getVideoDimensions(fullPath);
+      return { width: dimensions.width, height: dimensions.height };
+    } else {
+      const dimensions = await getImageDimensions(fullPath);
+      return { width: dimensions.width, height: dimensions.height };
+    }
+  } catch (error) {
+    console.error("Erreur lors de la lecture des dimensions:", error);
+    return { width: null, height: null };
+  }
+};
+
 // Récupérer tous les médias
 const getAllMedia = async (req, res) => {
   try {
@@ -37,6 +55,7 @@ const getAllMedia = async (req, res) => {
       hash: item.hash,
       width: item.width,
       height: item.height,
+      dimension: await getDimension(item.file_path, item.file_type),
       duration: item.duration,
       createdAt: item.created_at,
     }));

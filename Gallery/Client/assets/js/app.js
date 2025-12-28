@@ -270,7 +270,7 @@ class GalleryApp {
         this.showToast(`Upload: ${file.name}...`, "info");
 
         const result = await api.uploadFile(file, (progress) => {
-          CONFIG.log(`Upload progress: ${progress}%`);
+          console.log(`Upload progress: ${progress}%`);
         });
 
         if (result.success) {
@@ -963,11 +963,11 @@ class GalleryApp {
                     : ""
                 }
                 ${
-                  media.width && media.height
+                  media.dimension
                     ? `
                 <div class="info-row">
                     <span class="info-label">${CONFIG.MESSAGES.DIMENSIONS}</span>
-                    <span>${media.width} × ${media.height} px</span>
+                    <span>${media.dimension.width} × ${media.dimension.height}</span>
                 </div>
                 `
                     : ""

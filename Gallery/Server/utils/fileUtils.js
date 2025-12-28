@@ -3,11 +3,16 @@ const path = require("path");
 const sharp = require("sharp");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
+const ffprobePath = require("ffprobe-static");
 const config = require("../config/config.json");
 const crypto = require("crypto");
 
-// Configurer le chemin de FFmpeg
+// Configurer le chemin de FFmpeg et FFprobe
 ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath.path);
+
+// Cache pour les dimensions de vidéos
+const videoDimensionsCache = new Map();
 
 // Générer un nom de fichier unique
 generateFileName = (originalName) => {
@@ -108,23 +113,47 @@ const getImageDimensions = async (filePath) => {
 
 // Obtenir les dimensions d'une vidéo
 const getVideoDimensions = (filePath) => {
+  // Vérifier le cache d'abord
+  const cacheKey = filePath;
+  if (videoDimensionsCache.has(cacheKey)) {
+    return Promise.resolve(videoDimensionsCache.get(cacheKey));
+  }
+
   return new Promise((resolve) => {
-    ffmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) {
-        console.error("Erreur ffprobe:", err);
-        return resolve({ width: null, height: null, duration: null });
+    // Options optimisées pour une analyse rapide
+    ffmpeg.ffprobe(
+      filePath,
+      {
+        // Limiter l'analyse aux flux vidéo uniquement
+        select_streams: "v",
+        // Obtenir seulement les métadonnées de base
+        show_streams: true,
+        show_format: false,
+      },
+      (err, metadata) => {
+        if (err) {
+          console.error("Erreur ffprobe:", err);
+          const result = { width: null, height: null, duration: null };
+          // Mettre en cache même les erreurs pour éviter de réessayer
+          videoDimensionsCache.set(cacheKey, result);
+          return resolve(result);
+        }
+
+        const videoStream = metadata.streams.find(
+          (stream) => stream.codec_type === "video"
+        );
+
+        const result = {
+          width: videoStream?.width || null,
+          height: videoStream?.height || null,
+          duration: Math.round(metadata.format?.duration || 0) || null,
+        };
+
+        // Mettre en cache le résultat
+        videoDimensionsCache.set(cacheKey, result);
+        resolve(result);
       }
-
-      const videoStream = metadata.streams.find(
-        (stream) => stream.codec_type === "video"
-      );
-
-      resolve({
-        width: videoStream?.width || null,
-        height: videoStream?.height || null,
-        duration: Math.round(metadata.format.duration) || null,
-      });
-    });
+    );
   });
 };
 
