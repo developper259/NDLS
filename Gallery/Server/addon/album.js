@@ -4,20 +4,16 @@ const path = require("path");
 const config = require("../config/config.json");
 
 class Album {
-  init() {
-    // init favoris
-    this.favoriteAlbumId = config.album.favoriteIndex;
-    this.createFavoriteAlbum();
-  }
+  static favoriteAlbumId = config.album.favoriteIndex || 1;
 
   // Créer l'album favoris s'il n'existe pas
   static async createFavoriteAlbum() {
     try {
-      const existing = await Album.getById(this.favoriteAlbumId);
+      const existing = await Album.getById(Album.favoriteAlbumId);
       if (!existing) {
         await Album.create({
           name: "Favoris",
-          id: this.favoriteAlbumId,
+          id: Album.favoriteAlbumId,
           description: "Album des images favorites",
           isFavorite: true,
         });
