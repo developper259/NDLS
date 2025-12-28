@@ -97,7 +97,8 @@
     "defaultCover": "/images/default-cover.jpg",
     "maxItemsPerAlbum": 1000,
     "maxAlbumsPerUser": 100,
-    "defaultSort": "date_desc"
+    "defaultSort": "date_desc",
+    "favoriteIndex": 1
   },
 
   "cache": {

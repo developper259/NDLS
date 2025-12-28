@@ -51,6 +51,7 @@ class AlbumManager {
    * Affiche la grille des albums
    */
   renderAlbumsGrid() {
+    this.app.currentView = "albums";
     this.renderCount();
     const container = document.getElementById("photo-grid");
     if (!container) return;
@@ -72,7 +73,7 @@ class AlbumManager {
           : "assets/placeholder.jpg";
 
         return `
-      <div class="album-card-wrapper" data-album-id="${album.id}">
+      <div class="album-card-wrapper" data-album-id="${album.id}" oncontextmenu="app.albumManager.showContextMenu(event, ${album.id})">
         <div class="album-image-wrapper">
           <img src="${thumbnailSrc}" alt="${album.name}" loading="lazy" onload="this.parentElement.classList.add('loaded')">
         </div>
@@ -119,6 +120,12 @@ class AlbumManager {
       console.error("Erreur lors du chargement de l'album:", error);
       this.app.showToast("Erreur lors du chargement de l'album", "error");
     }
+  }
+
+  async deleteAlbum(albumId) {
+    api.deleteAlbum(albumId).then(() => {
+      this.refresh();
+    });
   }
 
   /**
@@ -182,6 +189,20 @@ class AlbumManager {
    */
   async refresh() {
     await this.loadAlbums();
+  }
+
+  showContextMenu(event, albumId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!albumId) return false;
+
+    // Afficher le menu contextuel
+    if (window.contextMenu) {
+      window.contextMenu.show(event, albumId, this.app);
+    }
+
+    return false;
   }
 }
 

@@ -166,7 +166,7 @@ class GalleryApp {
     switch (view) {
       case "albums":
         this.albumManager.loadAlbums();
-        return;
+        break;
 
       case "favorites":
         // Faire une requête API pour les favoris
@@ -1203,6 +1203,15 @@ class GalleryApp {
         "error"
       );
     }
+  }
+
+  async openAlbum(albumId) {
+    console.log(albumId);
+    this.albumManager.openAlbum(albumId);
+  }
+
+  async deleteAlbum(albumId) {
+    this.albumManager.deleteAlbum(albumId);
   }
 }
 

@@ -6,6 +6,7 @@ class ContextMenu {
     this.currentApp = null;
     this.currentMedia = null;
     this.currentIndex = null;
+    this.currentAlbumId = null;
 
     // Fermer le menu lors d'un clic ailleurs
     document.addEventListener("click", () => this.hide());
@@ -29,16 +30,24 @@ class ContextMenu {
     this.handleRestore = this.handleRestore.bind(this);
     this.handleDeletePermanently = this.handleDeletePermanently.bind(this);
     this.handleRemoveFromAlbum = this.handleRemoveFromAlbum.bind(this);
+
+    this.handleOpenAlbum = this.handleOpenAlbum.bind(this);
+    this.handleDeleteAlbum = this.handleDeleteAlbum.bind(this);
   }
 
   show(event, media, app) {
     event.preventDefault();
-    this.hide(); // Fermer tout menu déjà ouvert
+    this.hide();
+    
+    if (app.currentView === "albums") {
+      this.currentAlbumId = media;
+    } else {
+      this.currentMedia = media;
+      this.currentIndex = app.getIndexMediaById(media.id);
+    }
 
     // Stocker les références
     this.currentApp = app;
-    this.currentMedia = media;
-    this.currentIndex = app.getIndexMediaById(media.id);
 
     // Créer le contenu du menu
     this.menu.innerHTML = this.buildMenuContent(media, app);
@@ -147,12 +156,42 @@ class ContextMenu {
     }
   }
 
+  handleOpenAlbum() {
+    this.currentApp.openAlbum(this.currentAlbumId);
+    this.hide();
+  }
+
+  handleDeleteAlbum() {
+    this.currentApp.deleteAlbum(this.currentAlbumId);
+    this.hide();
+  }
+
   buildMenuContent(media, app) {
     const isInTrash = app.currentView === "trash";
     const isFavorite = media.favorite;
     const isInAlbumView = app.currentView === "album-view";
-    console.log(isInAlbumView);
+    const isInAlbumSelector = app.currentView == "albums";
     let menuItems = [];
+
+    if (isInAlbumSelector) {
+      menuItems.push(`
+      <div class="context-menu-item" data-action="openAlbum">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+          <path d="M8 15h8v-2H8v2zm0-4h8V9H8v2zm-1-5h10V5H7v1zm0 12v-1h10v1H7z"/>
+        </svg>
+        Ouvrir
+      </div>
+      
+      <div class="context-menu-item text-danger" data-action="deleteAlbum">
+          <svg class="icon" viewBox="0 0 24 24" style="color: red">
+            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+          </svg>
+          <span style="color: red">Supprimer</span>
+        </div>
+    `);
+      return menuItems.join("\n");
+    }
 
     // Options communes
     menuItems.push(`
@@ -171,7 +210,7 @@ class ContextMenu {
         Télécharger
       </div>
     `);
-    
+
     // Options qui ne s'affichent pas dans la corbeille
     if (!isInTrash) {
       menuItems.push(`
@@ -193,28 +232,32 @@ class ContextMenu {
           ${isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
         </div>
         
-        ${!isInAlbumView ? `
+        ${
+          !isInAlbumView
+            ? `
         <div class="context-menu-item" data-action="addToAlbum">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
           Ajouter à un album
         </div>
-        ` : `
+        `
+            : `
         <div class="context-menu-item" data-action="removeFromAlbum">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
           </svg>
           Enlever de l'album
-        </div>`}
+        </div>`
+        }
         
         <div class="context-menu-divider"></div>
         
         <div class="context-menu-item text-danger" data-action="moveToTrash">
-          <svg class="icon" viewBox="0 0 24 24">
+          <svg class="icon" viewBox="0 0 24 24" style="color: red">
             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
           </svg>
-          Déplacer vers la corbeille
+          <span style="color: red">Déplacer vers la corbeille</span>
         </div>
       `);
     } else {
@@ -230,10 +273,10 @@ class ContextMenu {
         <div class="context-menu-divider"></div>
         
         <div class="context-menu-item text-danger" data-action="deletePermanently">
-          <svg class="icon" viewBox="0 0 24 24">
+          <svg class="icon" viewBox="0 0 24 24" style="color: red">
             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
           </svg>
-          Supprimer définitivement
+          <span style="color: red">Supprimer définitivement</span>
         </div>
       `);
     }

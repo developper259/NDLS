@@ -6,18 +6,18 @@ const config = require("../config/config.json");
 class Album {
   init() {
     // init favoris
-    this.favoriteAlbumId = 0;
+    this.favoriteAlbumId = config.album.favoriteIndex;
     this.createFavoriteAlbum();
   }
 
   // Créer l'album favoris s'il n'existe pas
   static async createFavoriteAlbum() {
-    const favoriteAlbumId = 1;
     try {
-      const existing = await Album.getById(favoriteAlbumId);
+      const existing = await Album.getById(this.favoriteAlbumId);
       if (!existing) {
         await Album.create({
           name: "Favoris",
+          id: this.favoriteAlbumId,
           description: "Album des images favorites",
           isFavorite: true,
         });
@@ -28,11 +28,11 @@ class Album {
   }
 
   // Créer un nouvel album
-  static async create({ name, description = "", isFavorite = false }) {
+  static async create({ name, description = "", isFavorite = false, id = null }) {
     try {
       const result = await db.run(
-        "INSERT INTO albums (name, description, is_favorite) VALUES (?, ?, ?)",
-        [name, description, isFavorite ? 1 : 0]
+        "INSERT INTO albums (id, name, description, is_favorite) VALUES (?, ?, ?, ?)",
+        [id ? id : null, name, description, isFavorite ? 1 : 0]
       );
       return { id: result.id, name, description, isFavorite };
     } catch (error) {

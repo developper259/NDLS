@@ -1,4 +1,5 @@
 const Album = require("../addon/album");
+const config = require('../config/config.json');
 const { getThumb } = require("../utils/fileUtils");
 
 // Générer un thumbnail de base pour les albums sans média
@@ -122,6 +123,13 @@ const updateAlbum = async (req, res) => {
 // Supprimer un album
 const deleteAlbum = async (req, res) => {
   try {
+    if (parseInt(req.params.id) === config.album.favoriteIndex) {
+      return res.status(400).json({
+        success: false,
+        message: "Impossible de supprimer l'album favori",
+      });
+    }
+
     const result = await Album.delete(req.params.id);
 
     if (!result) {
