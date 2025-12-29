@@ -228,9 +228,9 @@ class GalleryApp {
         this.media = response.data || [];
         this.setFilteredMedia([...this.media]);
 
-        // Trier par date d'ajout la plus récente en premier
+        // Trier par date de création la plus récente en premier
         this.filteredMedia.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          (a, b) => new Date(b.creation_date) - new Date(a.creation_date)
         );
       } else {
         throw new Error(
@@ -773,70 +773,121 @@ class GalleryApp {
     const container = document.getElementById("photo-grid");
     if (!container) return;
 
-    // Mise à jour pour gérer les types 'image' et 'video' au lieu de 'photo' et 'video'
     this.renderCount();
 
-    // Grille vide
     if (this.filteredMedia.length === 0) {
       container.innerHTML = `
-                <div class="empty-state">
-                    <span class="material-icons empty-icon">image_search</span>
-                    <p class="empty-title">${CONFIG.MESSAGES.NO_MEDIA}</p>
-                    <p class="empty-desc">${CONFIG.MESSAGES.NO_MEDIA_DESC}</p>
-                </div>
-            `;
+        <div class="empty-state">
+          <span class="material-icons empty-icon">image_search</span>
+          <p class="empty-title">${CONFIG.MESSAGES.NO_MEDIA}</p>
+          <p class="empty-desc">${CONFIG.MESSAGES.NO_MEDIA_DESC}</p>
+        </div>
+      `;
       return;
     }
 
-    // Grille des médias
-    container.innerHTML = this.filteredMedia
-      .map(
-        (media, index) => `
-            <div class="photo-item" data-id="${
-              media.id
-            }" data-index="${index}" data-tooltip="Cliquez pour agrandir" 
-                 onclick="app.openLightbox(${index})" oncontextmenu="app.showContextMenu(event, ${index})">
-                ${
-                  media.type === "video"
-                    ? `
-                    <div class="video-badge">
-                        <span class="material-icons">videocam</span>
-                        ${
-                          media.duration
-                            ? CONFIG.formatDuration(media.duration)
-                            : ""
-                        }
-                    </div>
-                `
-                    : ""
-                }
-                <img src="${
-                  media.thumb
-                    ? CONFIG.BASE_URL + media.thumb
-                    : CONFIG.BASE_URL + media.path
-                }" alt="${
-          media.name
-        }" loading="lazy" onload="this.parentElement.classList.add('loaded')">
-                <div class="photo-overlay">
-                    <button class="select-btn" onclick="event.stopPropagation(); app.toggleSelect('${
-                      media.id
-                    }')">
-                        <span class="material-icons">check</span>
-                    </button>
-                </div>
-                <div class="favorite-overlay ${
-                  media.favorite ? "item-favorite" : ""
-                }">
-                    <button class="favorite-btn">
-                        <span class="material-icons">favorite</span>
-                    </button>
-                </div>
-            </div>
-        `
-      )
-      .join("");
+    const groupedMedia = this.filteredMedia.reduce((acc, media) => {
+      const date = new Date(media.creation_date);
+      const year = date.getFullYear();
+      const currentYear = new Date().getFullYear();
+      const month = date.toLocaleString("fr-FR", { month: "long" });
+      const monthKey =
+        year === currentYear
+          ? `${month.charAt(0).toUpperCase() + month.slice(1)}`
+          : `${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
 
-    // Marquer les éléments sélectionnés
+      // Format du jour: "Sat. Nov. 30, 2024"
+      const dayKey = date.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      // Initialiser le mois si nécessaire
+      if (!acc[monthKey]) {
+        acc[monthKey] = {};
+      }
+
+      // Initialiser le jour si nécessaire
+      if (!acc[monthKey][dayKey]) {
+        acc[monthKey][dayKey] = [];
+      }
+
+      acc[monthKey][dayKey].push(media);
+      return acc;
+    }, {});
+
+    let galleryHtml = "";
+    for (const monthName in groupedMedia) {
+      galleryHtml += `<h2 class="group-title">${monthName}</h2>`;
+      galleryHtml += '<div class="photo-list-group">';
+
+      // Trier les jours par ordre chronologique (plus récent au plus vieux)
+      const sortedDays = Object.keys(groupedMedia[monthName]).sort((a, b) => {
+        return new Date(b) - new Date(a);
+      });
+
+      for (const dayName of sortedDays) {
+        galleryHtml += '<div class="day-container">';
+        galleryHtml += `<h3 class="day-title">${dayName}</h3>`;
+        galleryHtml += '<div class="photo-day-group">';
+
+        groupedMedia[monthName][dayName].forEach((media) => {
+          const globalIndex = this.filteredMedia.indexOf(media);
+          galleryHtml += `
+          <div class="photo-item" data-id="${
+            media.id
+          }" data-index="${globalIndex}" 
+               data-tooltip="Cliquez pour agrandir" onclick="app.openLightbox(${globalIndex})" 
+               oncontextmenu="app.showContextMenu(event, ${globalIndex})">
+              ${
+                media.type === "video"
+                  ? `
+                <div class="video-badge">
+                    <span class="material-icons">videocam</span>
+                    ${
+                      media.duration
+                        ? CONFIG.formatDuration(media.duration)
+                        : ""
+                    }
+                </div>
+              `
+                  : ""
+              }
+              <img src="${
+                media.thumb
+                  ? CONFIG.BASE_URL + media.thumb
+                  : CONFIG.BASE_URL + media.path
+              }" 
+                   alt="${media.name}" loading="lazy" 
+                   onload="this.parentElement.classList.add('loaded')">
+              <div class="photo-overlay">
+                  <button class="select-btn" onclick="event.stopPropagation(); app.toggleSelect('${
+                    media.id
+                  }')">
+                      <span class="material-icons">check</span>
+                  </button>
+              </div>
+              <div class="favorite-overlay ${
+                media.favorite ? "item-favorite" : ""
+              }">
+                  <button class="favorite-btn">
+                      <span class="material-icons">favorite</span>
+                  </button>
+              </div>
+          </div>`;
+        });
+
+        galleryHtml += "</div>";
+        galleryHtml += "</div>";
+      }
+
+      galleryHtml += "</div>";
+    }
+
+    container.innerHTML = galleryHtml;
+
     this.selectedItems.forEach((id) => {
       const el = container.querySelector(`[data-id="${id}"]`);
       if (el) el.classList.add("selected");
@@ -957,12 +1008,14 @@ class GalleryApp {
                     : ""
                 }
                 <div class="info-row">
-                    <span class="info-label">${
-                      CONFIG.MESSAGES.DATE_ADDED
-                    }</span>
+                    <span class="info-label">Date de création</span>
                     <span>${new Date(
-                      media.createdAt
-                    ).toLocaleDateString()}</span>
+                      media.creation_date
+                    ).toLocaleString()}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date d'ajout</span>
+                    <span>${new Date(media.upload_date).toLocaleString()}</span>
                 </div>
             </div>
         `;

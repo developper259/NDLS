@@ -502,28 +502,108 @@ img {
 }
 
 .photo-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: flex;
+    flex-direction: column;
+}
+
+.photo-list-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.group-title {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 16px 0 8px 0;
+    padding-bottom: 0;
+}
+
+.photo-list-group .day-container {
+    display: block;
+    margin-bottom: 16px;
+}
+
+.day-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    margin: 12px 0 8px 0;
+    width: auto;
+}
+
+.photo-day-group {
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
+    padding: 0 20px 16px 0;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex: none;
+    text-align: left;
+}
+
+.photo-day-group .photo-item {
+    flex: 0 1 calc(25% - 9px);
+    min-width: 120px;
+    max-width: 200px;
+    margin: 0;
+}
+
+.photo-day-group .photo-item::before {
+    padding-top: 75%;
 }
 
 @media (max-width: 1200px) {
-    .photo-grid {
-        grid-template-columns: repeat(3, 1fr);
+    .photo-day-group .photo-item {
+        flex: 1 1 calc(33.333% - 8px);
+        min-width: 100px;
+        max-width: 180px;
     }
 }
 
 @media (max-width: 768px) {
-    .photo-grid {
-        grid-template-columns: repeat(2, 1fr);
+    .photo-day-group {
+        padding: 0 10px 32px 10px;
+    }
+
+    .photo-day-group .photo-item {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 80px;
+        max-width: 150px;
+    }
+
+    .day-title {
+        padding-left: 10px;
     }
 }
 
 @media (max-width: 480px) {
-    .photo-grid {
-        grid-template-columns: 1fr;
+    .photo-day-group .photo-item {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 70px;
+        max-width: 120px;
     }
 }
+
+.photo-list-group .photo-item {
+    max-width: 400px;
+}
+
+.photo-list-group .photo-item::before {
+    padding-top: 60%;
+}
+
+@media (max-width: 768px) {
+    .photo-list-group .photo-item {
+        max-width: 100%;
+    }
+}
+
 
 .photo-item {
     position: relative;

@@ -4,8 +4,11 @@
 
 const CONFIG = {
   // URL de votre API - MODIFIEZ ICI
-  API_BASE_URL: "https://annual-sharai-ndl-0321241e.koyeb.app/api",
-  BASE_URL: "https://annual-sharai-ndl-0321241e.koyeb.app",
+  //API_BASE_URL: "https://annual-sharai-ndl-0321241e.koyeb.app/api",
+  //BASE_URL: "https://annual-sharai-ndl-0321241e.koyeb.app",
+
+  API_BASE_URL: "http://localhost:3000/api",
+  BASE_URL: "http://localhost:3000",
 
   // Endpoints de l'API
   ENDPOINTS: {
