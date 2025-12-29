@@ -1,14 +1,9 @@
-node_modules/
-/Gallery/server/data/
-
-.vscode
-.DS_Store
-
 # Miscellaneous
 *.class
 *.log
 *.pyc
 *.swp
+.DS_Store
 .atom/
 .build/
 .buildlog/
@@ -39,14 +34,12 @@ migrate_working_dir/
 /coverage/
 
 # Symbolication related
-/app.*.symbols
+app.*.symbols
 
 # Obfuscation related
-/app.*.map.json
+app.*.map.json
 
-/Gallery/Mobile/android
-/Gallery/Mobile/ios
-/Gallery/Mobile/linux
-/Gallery/Mobile/macos
-/Gallery/Mobile/web
-/Gallery/Mobile/windows
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
