@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  playlists Playlist[]
+  favorites Track[]    @relation("UserFavorites")
+}
+
+model Playlist {
+  id     String  @id @default(cuid())
+  name   String
+  user   User    @relation(fields: [userId], references: [id])
+  userId String
+  tracks Track[] @relation("PlaylistTracks")
+}
+
+model Track {
+  id          String     @id @default(cuid())
+  deezerId    String     @unique
+  title       String
+  artist      String
+  album       String
+  coverUrl    String
+  durationMs  Int
+  youtubeId   String?
+  playlists   Playlist[] @relation("PlaylistTracks")
+  favoritedBy User[]     @relation("UserFavorites")
+}
